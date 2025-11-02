@@ -25,7 +25,12 @@ const PORT = process.env.PORT || 3001;
 // Socket.IO setup for WebRTC signaling with PROFESSIONAL QUALITY settings
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:8080",
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:3000",
+      process.env.CLIENT_URL || "http://localhost:8080",
+      /\.onrender\.com$/  // Allow all Render subdomains
+    ],
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -348,11 +353,25 @@ function handleUserLeaving(socket, roomCode) {
 connectDB();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    process.env.CLIENT_URL || "http://localhost:8080",
+    /\.onrender\.com$/  // Allow all Render subdomains
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// Serve static files from React build (for production)
+const frontendPath = path.join(__dirname, '..', 'dist');
+app.use(express.static(frontendPath));
+
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', tasksRoutes);
 app.use('/api/partnerships', partnershipsRoutes);
@@ -365,9 +384,14 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Tandem Track Mate API is running' });
 });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+// Serve React app for all other routes (SPA fallback)
+app.get('*', (req, res) => {
+  // Don't serve index.html for API routes or socket.io
+  if (!req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  } else {
+    res.status(404).json({ error: 'Route not found' });
+  }
 });
 
 // Error handler
@@ -377,7 +401,7 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server is running on port ${PORT}`);
   console.log(`🎥 Video signaling server ready`);
 });
