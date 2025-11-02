@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Focus Session Tester</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+      h1 {
+        margin-top: 0;
+        text-align: center;
+      }
+      .button {
+        display: block;
+        width: 100%;
+        padding: 15px;
+        margin: 10px 0;
+        font-size: 16px;
+        font-weight: bold;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: white;
+        color: #667eea;
+      }
+      .button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+      .button.success {
+        background: #10b981;
+        color: white;
+      }
+      .button.danger {
+        background: #ef4444;
+        color: white;
+      }
+      .button.warning {
+        background: #f59e0b;
+        color: white;
+      }
+      #output {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 20px;
+        font-family: "Monaco", "Courier New", monospace;
+        font-size: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+      }
+      .alert {
+        padding: 12px;
+        border-radius: 8px;
+        margin: 10px 0;
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px solid rgba(239, 68, 68, 0.5);
+      }
+      .success-msg {
+        background: rgba(16, 185, 129, 0.2);
+        border: 1px solid rgba(16, 185, 129, 0.5);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎯 Focus Session Tester</h1>
+
+      <div id="status"></div>
+
+      <button class="button" onclick="test25Minutes()">
+        📝 Record 25 Minutes (1 Session)
+      </button>
+
+      <button class="button warning" onclick="test75Minutes()">
+        🔥 Record 75 Minutes (3 Sessions)
+      </button>
+
+      <button class="button success" onclick="testGoalAchieved()">
+        🏆 Record 125 Minutes (5 Sessions - Goal!)
+      </button>
+
+      <button class="button" onclick="testCustom()">⚙️ Custom Minutes</button>
+
+      <button class="button danger" onclick="clearToday()">
+        🗑️ Clear Today's Data
+      </button>
+
+      <div id="output"></div>
+    </div>
+
+    <script>
+      const API_URL = "http://localhost:3001/api";
+      let output = document.getElementById("output");
+      let status = document.getElementById("status");
+
+      function log(message, type = "info") {
+        const timestamp = new Date().toLocaleTimeString();
+        const emoji =
+          type === "success" ? "✅" : type === "error" ? "❌" : "📝";
+        output.innerHTML += `[${timestamp}] ${emoji} ${message}\n`;
+        output.scrollTop = output.scrollHeight;
+      }
+
+      function checkAuth() {
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          status.innerHTML = `
+                    <div class="alert">
+                        <strong>⚠️ Not Logged In!</strong><br>
+                        Please login at <a href="http://localhost:5173/auth" style="color: white; text-decoration: underline;">http://localhost:5173/auth</a> first.
+                    </div>
+                `;
+          return false;
+        }
+        status.innerHTML = `<div class="alert success-msg">✅ Authenticated</div>`;
+        return true;
+      }
+
+      async function recordSession(minutes) {
+        if (!checkAuth()) return;
+
+        log(`Recording ${minutes} minutes...`);
+
+        try {
+          const response = await fetch(`${API_URL}/focus/session`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + localStorage.getItem("authToken"),
+            },
+            body: JSON.stringify({
+              focusMinutes: minutes,
+              sessionType: "focus",
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            log(
+              `SUCCESS! Total today: ${data.session.focusMinutes} minutes`,
+              "success"
+            );
+            log(
+              `Sessions completed: ${data.session.sessionsCompleted}`,
+              "success"
+            );
+            log(
+              `Goal achieved: ${
+                data.session.achieved ? "🏆 YES!" : "⏳ Not yet"
+              }`,
+              "success"
+            );
+
+            // Trigger refresh on main app
+            window.dispatchEvent(new CustomEvent("focusSessionComplete"));
+            log("Triggered calendar refresh event", "success");
+
+            // Show in main window if opened from there
+            if (window.opener && !window.opener.closed) {
+              window.opener.dispatchEvent(
+                new CustomEvent("focusSessionComplete")
+              );
+              log("Triggered refresh in main window", "success");
+            }
+          } else {
+            log(`ERROR: ${data.error}`, "error");
+          }
+        } catch (error) {
+          log(`ERROR: ${error.message}`, "error");
+          log("Is the backend server running on port 3001?", "error");
+        }
+      }
+
+      function test25Minutes() {
+        recordSession(25);
+      }
+
+      function test75Minutes() {
+        log("Recording 3 sessions...");
+        setTimeout(() => recordSession(25), 100);
+        setTimeout(() => recordSession(25), 500);
+        setTimeout(() => recordSession(25), 900);
+      }
+
+      function testGoalAchieved() {
+        log("Recording 5 sessions to achieve 2-hour goal...");
+        for (let i = 0; i < 5; i++) {
+          setTimeout(() => recordSession(25), i * 400);
+        }
+      }
+
+      function testCustom() {
+        const minutes = prompt("Enter minutes to record:", "15");
+        if (minutes && !isNaN(minutes)) {
+          recordSession(parseInt(minutes));
+        }
+      }
+
+      async function clearToday() {
+        if (!confirm("Delete all focus data for today?")) return;
+
+        log("This feature requires database access...", "error");
+        log(
+          "Alternative: Manually delete from MongoDB or wait for tomorrow",
+          "info"
+        );
+      }
+
+      // Check auth on load
+      window.onload = () => {
+        checkAuth();
+        log("Focus Session Tester loaded");
+        log("Make sure backend is running on http://localhost:3001");
+        log("");
+      };
+    </script>
+  </body>
+</html>

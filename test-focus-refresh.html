@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Focus Time Refresh Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .test-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .status {
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .timer-display {
+        font-size: 48px;
+        font-weight: bold;
+        text-align: center;
+        margin: 20px 0;
+        color: #333;
+      }
+      .focus-time {
+        font-size: 32px;
+        color: #28a745;
+        text-align: center;
+        margin: 10px 0;
+      }
+      pre {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧪 Focus Time Page Refresh Test</h1>
+
+    <div class="test-card">
+      <h2>📊 Focus Time Display</h2>
+      <div class="focus-time" id="focusTime">Loading...</div>
+      <div id="focusBreakdown" style="text-align: center; color: #666"></div>
+    </div>
+
+    <div class="test-card">
+      <h2>⏱️ Timer Simulation</h2>
+      <div class="timer-display" id="timerDisplay">25:00</div>
+      <div style="text-align: center">
+        <button onclick="startTimer()">Start Timer</button>
+        <button onclick="pauseTimer()">Pause</button>
+        <button onclick="resetTimer()">Reset</button>
+        <button onclick="simulateRefresh()" style="background: #ffc107">
+          🔄 Simulate Refresh
+        </button>
+      </div>
+      <div id="timerStatus" class="status info" style="margin-top: 10px">
+        Timer not started
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h2>🔍 LocalStorage State</h2>
+      <pre id="localStorageState">No timer state</pre>
+    </div>
+
+    <div class="test-card">
+      <h2>✅ Test Instructions</h2>
+      <ol>
+        <li>Click "Start Timer" to begin a 25-minute focus session</li>
+        <li>Wait 10 seconds (simulates 10 minutes)</li>
+        <li>Click "🔄 Simulate Refresh" to test page refresh behavior</li>
+        <li>Check if focus time remains consistent after refresh</li>
+        <li>Timer should continue from where it left off</li>
+      </ol>
+      <div id="testResults"></div>
+    </div>
+
+    <script>
+      let timerInterval = null;
+      let isActive = false;
+      let timeLeft = 25 * 60; // 25 minutes in seconds
+      let startTime = 0;
+      const focusMinutes = 25;
+
+      // Simulate database (completed sessions)
+      const dbCompletedMinutes = 0; // Start with 0 completed
+
+      function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, "0")}:${secs
+          .toString()
+          .padStart(2, "0")}`;
+      }
+
+      function updateDisplay() {
+        document.getElementById("timerDisplay").textContent =
+          formatTime(timeLeft);
+
+        // Calculate current session progress
+        let currentProgress = 0;
+        if (isActive && startTime > 0) {
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          const sessionDuration = focusMinutes * 60;
+          const actualElapsed = Math.min(elapsed, sessionDuration);
+          currentProgress = Math.floor(actualElapsed / 60);
+        }
+
+        const totalMinutes = dbCompletedMinutes + currentProgress;
+        const totalHours = (totalMinutes / 60).toFixed(1);
+
+        document.getElementById("focusTime").textContent = `${totalHours}h`;
+        document.getElementById(
+          "focusBreakdown"
+        ).textContent = `${dbCompletedMinutes} min (completed) + ${currentProgress} min (current) = ${totalMinutes} min`;
+
+        // Update localStorage display
+        const state = {
+          mode: "focus",
+          timeLeft,
+          isActive,
+          focusMinutes,
+          startTime: isActive ? startTime : 0,
+        };
+        document.getElementById("localStorageState").textContent =
+          JSON.stringify(state, null, 2);
+      }
+
+      function startTimer() {
+        if (!isActive) {
+          isActive = true;
+          startTime = Date.now();
+
+          timerInterval = setInterval(() => {
+            timeLeft--;
+            updateDisplay();
+
+            if (timeLeft <= 0) {
+              clearInterval(timerInterval);
+              isActive = false;
+              document.getElementById("timerStatus").className =
+                "status success";
+              document.getElementById("timerStatus").textContent =
+                "✅ Session complete! (In real app, this would save to database)";
+            }
+          }, 1000);
+
+          document.getElementById("timerStatus").className = "status info";
+          document.getElementById(
+            "timerStatus"
+          ).textContent = `⏱️ Timer running... Started at ${new Date(
+            startTime
+          ).toLocaleTimeString()}`;
+        }
+      }
+
+      function pauseTimer() {
+        if (isActive) {
+          isActive = false;
+          clearInterval(timerInterval);
+          document.getElementById("timerStatus").className = "status info";
+          document.getElementById("timerStatus").textContent =
+            "⏸️ Timer paused";
+        }
+      }
+
+      function resetTimer() {
+        isActive = false;
+        timeLeft = 25 * 60;
+        startTime = 0;
+        clearInterval(timerInterval);
+        updateDisplay();
+        document.getElementById("timerStatus").className = "status info";
+        document.getElementById("timerStatus").textContent =
+          "Timer reset to 25:00";
+      }
+
+      function simulateRefresh() {
+        // Save current state
+        const savedState = {
+          mode: "focus",
+          timeLeft,
+          isActive,
+          focusMinutes,
+          startTime: isActive ? startTime : 0,
+        };
+
+        // Simulate page reload by restoring state
+        const saved = savedState;
+        if (saved.isActive && saved.startTime) {
+          const elapsed = Math.floor((Date.now() - saved.startTime) / 1000);
+          const remainingTime = Math.max(0, saved.timeLeft - elapsed);
+
+          // Clear current timer
+          clearInterval(timerInterval);
+
+          // Restore with recalculated values
+          isActive = remainingTime > 0;
+          timeLeft = remainingTime;
+          // CRITICAL: Recalculate startTime
+          startTime =
+            remainingTime > 0
+              ? Date.now() - (saved.timeLeft - remainingTime) * 1000
+              : 0;
+
+          const testResult = document.getElementById("testResults");
+          testResult.innerHTML = `
+                    <div class="status ${
+                      remainingTime > 0 ? "success" : "error"
+                    }">
+                        <strong>🔄 Refresh Simulation Results:</strong><br>
+                        • Original timeLeft: ${saved.timeLeft}s<br>
+                        • Elapsed since start: ${elapsed}s<br>
+                        • New timeLeft: ${remainingTime}s<br>
+                        • Original startTime: ${new Date(
+                          saved.startTime
+                        ).toLocaleTimeString()}<br>
+                        • Recalculated startTime: ${new Date(
+                          startTime
+                        ).toLocaleTimeString()}<br>
+                        • Will continue: ${
+                          isActive ? "YES ✅" : "NO (expired) ❌"
+                        }
+                    </div>
+                `;
+
+          // Restart timer if active
+          if (isActive) {
+            timerInterval = setInterval(() => {
+              timeLeft--;
+              updateDisplay();
+
+              if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                isActive = false;
+              }
+            }, 1000);
+
+            document.getElementById("timerStatus").className = "status success";
+            document.getElementById("timerStatus").textContent =
+              "✅ Timer restored successfully after refresh!";
+          }
+        }
+
+        updateDisplay();
+      }
+
+      // Initial display
+      updateDisplay();
+    </script>
+  </body>
+</html>

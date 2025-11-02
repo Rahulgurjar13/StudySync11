@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page Refresh Test</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        max-width: 900px;
+        margin: 50px auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+      h1 {
+        margin-top: 0;
+        text-align: center;
+      }
+      .test-section {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 20px;
+        border-radius: 15px;
+        margin: 20px 0;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 20px;
+        margin: 5px;
+        font-size: 14px;
+        font-weight: bold;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: white;
+        color: #667eea;
+      }
+      .button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+      .button.danger {
+        background: #ef4444;
+        color: white;
+      }
+      .button.success {
+        background: #10b981;
+        color: white;
+      }
+      .status {
+        padding: 10px;
+        border-radius: 8px;
+        margin: 10px 0;
+        font-weight: bold;
+      }
+      .status.pass {
+        background: rgba(16, 185, 129, 0.2);
+        border: 1px solid #10b981;
+      }
+      .status.fail {
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px solid #ef4444;
+      }
+      .code {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 15px;
+        border-radius: 8px;
+        font-family: "Monaco", "Courier New", monospace;
+        font-size: 12px;
+        margin: 10px 0;
+        overflow-x: auto;
+      }
+      .step {
+        margin: 15px 0;
+      }
+      .step-number {
+        display: inline-block;
+        width: 25px;
+        height: 25px;
+        background: #667eea;
+        color: white;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 25px;
+        margin-right: 10px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔄 Page Refresh Test</h1>
+      <p>
+        <strong>Testing:</strong> Focus Time accuracy when refreshing page
+        during countdown
+      </p>
+
+      <div class="test-section">
+        <h3>📋 Test Scenario: Start Timer → Refresh → Verify Accuracy</h3>
+
+        <div class="step">
+          <span class="step-number">1</span>
+          <strong>Open your app:</strong>
+          <a
+            href="http://localhost:5173"
+            style="color: white; text-decoration: underline"
+            >http://localhost:5173</a
+          >
+        </div>
+
+        <div class="step">
+          <span class="step-number">2</span>
+          <strong>Start a 25-minute focus session</strong>
+          <div class="code">
+            // Click "Start" on the Pomodoro timer // Timer should start
+            counting down from 25:00
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="step-number">3</span>
+          <strong>Wait 5 minutes, then refresh</strong>
+          <div class="code">
+            // Wait until timer shows ~20:00 remaining // Press F5 or Cmd+R to
+            refresh the page
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="step-number">4</span>
+          <strong>Check these values immediately:</strong>
+          <div class="code">
+            ✅ Timer: Should resume at ~20:00 (exactly where it left off) ✅
+            Focus Time: Should show ~5 minutes (current session progress) ✅
+            Today's Progress: Should show ~5 minutes ✅ QuickStats: Should show
+            ~0.1 hours
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="step-number">5</span>
+          <strong>Continue countdown</strong>
+          <div class="code">
+            // Let timer continue - Focus Time should update in real-time //
+            Should go from 5m → 6m → 7m → ... → 25m as timer counts down
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="step-number">6</span>
+          <strong>Complete session, then refresh</strong>
+          <div class="code">
+            // Wait for timer to complete (0:00) // Refresh page again // Focus
+            Time should still show 25 minutes (now saved to database)
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🔍 Debug Tools</h3>
+
+        <button class="button" onclick="checkLocalStorage()">
+          Check localStorage State
+        </button>
+
+        <button class="button" onclick="checkDatabase()">
+          Check Database Sessions
+        </button>
+
+        <button class="button" onclick="simulateRefresh()">
+          Simulate Page Refresh
+        </button>
+
+        <button class="button danger" onclick="clearData()">
+          Clear All Data (Reset)
+        </button>
+
+        <div id="debug-output" class="code" style="margin-top: 15px"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>📊 Expected Console Logs</h3>
+
+        <div class="code">
+          🔄 Active session progress: 5 minutes elapsed in current session<br />
+          📊 Loaded today's focus time from database: 0 minutes + current
+          session: 5 minutes = total: 5 minutes<br />
+          💾 Persisted timer state: {mode: "focus", timeLeft: 1200, isActive:
+          true, ...}<br />
+          🎯 TIMER COMPLETE - Recording session: 25 minutes<br />
+          ✅ Focus session recorded successfully: {...}<br />
+          🔄 Synced totalFocusTime with database: 25 minutes
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>✅ Success Criteria</h3>
+        <ul>
+          <li>✅ Timer resumes at correct time after refresh</li>
+          <li>✅ Focus Time shows current session progress during countdown</li>
+          <li>✅ Focus Time updates in real-time (every second)</li>
+          <li>✅ After completion, Focus Time persists correctly</li>
+          <li>✅ No data loss or inconsistency</li>
+          <li>✅ Calendar and QuickStats stay in sync</li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      const output = document.getElementById("debug-output");
+
+      function log(message) {
+        output.innerHTML += message + "\n";
+        output.scrollTop = output.scrollHeight;
+      }
+
+      function checkLocalStorage() {
+        output.innerHTML = "";
+        log("🔍 Checking localStorage...");
+
+        try {
+          const timerState = JSON.parse(
+            localStorage.getItem("pomodoroState") || "{}"
+          );
+          log("⏰ Timer State: " + JSON.stringify(timerState, null, 2));
+
+          const authToken = localStorage.getItem("authToken");
+          log(
+            "🔑 Auth Token: " +
+              (authToken
+                ? "Present (" + authToken.substring(0, 20) + "...)"
+                : "Missing")
+          );
+
+          const user = JSON.parse(localStorage.getItem("user") || "{}");
+          log("👤 User: " + (user.email || "Not logged in"));
+        } catch (e) {
+          log("❌ Error reading localStorage: " + e.message);
+        }
+      }
+
+      async function checkDatabase() {
+        output.innerHTML = "";
+        log("🗄️ Checking database...");
+
+        try {
+          const response = await fetch(
+            "http://localhost:3001/api/focus/month/2025/9",
+            {
+              headers: {
+                Authorization: "Bearer " + localStorage.getItem("authToken"),
+              },
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            log("✅ Database Response: " + JSON.stringify(data, null, 2));
+          } else {
+            log(
+              "❌ Database Error: " +
+                response.status +
+                " " +
+                response.statusText
+            );
+          }
+        } catch (e) {
+          log("❌ Network Error: " + e.message);
+          log("💡 Is the backend server running on port 3001?");
+        }
+      }
+
+      function simulateRefresh() {
+        output.innerHTML = "";
+        log("🔄 Simulating page refresh...");
+        log(
+          "📝 This would normally reload the page and recalculate focus time"
+        );
+        log("💡 In real test: Press F5 after starting timer");
+      }
+
+      function clearData() {
+        if (
+          confirm("Clear all timer data and sessions? This cannot be undone!")
+        ) {
+          output.innerHTML = "";
+          localStorage.removeItem("pomodoroState");
+          log("🗑️ Cleared localStorage timer state");
+
+          // Note: Database clearing would require backend call
+          log("⚠️ Database sessions not cleared (would need backend API)");
+          log("🔄 Page will reload in 2 seconds...");
+
+          setTimeout(() => {
+            if (window.opener) {
+              window.opener.location.reload();
+            }
+            window.location.reload();
+          }, 2000);
+        }
+      }
+
+      // Auto-check on load
+      window.onload = () => {
+        log("🧪 Page Refresh Test loaded");
+        log("📋 Follow the test steps above to verify the fix");
+        log("");
+      };
+    </script>
+  </body>
+</html>

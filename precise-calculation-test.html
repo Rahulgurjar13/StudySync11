@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Precise Calculation Test</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        max-width: 1000px;
+        margin: 50px auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+      h1 {
+        margin-top: 0;
+        text-align: center;
+      }
+      .test-section {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 20px;
+        border-radius: 15px;
+        margin: 20px 0;
+      }
+      .status {
+        padding: 15px;
+        border-radius: 10px;
+        margin: 10px 0;
+        font-weight: bold;
+        font-size: 16px;
+      }
+      .status.pass {
+        background: rgba(16, 185, 129, 0.2);
+        border: 2px solid #10b981;
+      }
+      .status.fail {
+        background: rgba(239, 68, 68, 0.2);
+        border: 2px solid #ef4444;
+      }
+      .status.info {
+        background: rgba(59, 130, 246, 0.2);
+        border: 2px solid #3b82f6;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 20px;
+        margin: 5px;
+        font-size: 14px;
+        font-weight: bold;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: white;
+        color: #667eea;
+      }
+      .button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+      .comparison {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin: 20px 0;
+      }
+      .component {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 10px;
+      }
+      .component h3 {
+        margin-top: 0;
+        color: #fbbf24;
+      }
+      .code {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 15px;
+        border-radius: 8px;
+        font-family: "Monaco", "Courier New", monospace;
+        font-size: 12px;
+        margin: 10px 0;
+        overflow-x: auto;
+      }
+      .calculation {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+        font-family: "Monaco", "Courier New", monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎯 Precise Focus Time Calculation Test</h1>
+      <p>
+        <strong>Testing:</strong> Mathematical precision in elapsed time
+        calculations
+      </p>
+
+      <div class="test-section">
+        <h3>📊 Current Calculation Logic</h3>
+        <div class="calculation">
+          Current Session Progress = MIN(elapsed_time, session_duration) / 60<br />
+          <br />
+          Where:<br />
+          • elapsed_time = current_time - start_time<br />
+          • session_duration = focusMinutes × 60 (from timer state)<br />
+          • MIN() ensures we don't exceed session length<br />
+          • /60 converts seconds to minutes
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🔍 Real-Time Values</h3>
+        <div class="comparison">
+          <div class="component">
+            <h3>PomodoroTimer</h3>
+            <div id="pomodoro-display">Loading...</div>
+          </div>
+          <div class="component">
+            <h3>QuickStats</h3>
+            <div id="quickstats-display">Loading...</div>
+          </div>
+        </div>
+        <div id="consistency-status" class="status info">
+          Checking consistency...
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🧮 Calculation Breakdown</h3>
+        <div id="calculation-breakdown" class="code">
+          Click "Check Values" to see calculation details
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🧪 Test Actions</h3>
+        <button class="button" onclick="checkValues()">
+          🔍 Check Current Values
+        </button>
+        <button class="button" onclick="simulatePreciseTimer()">
+          ⏱️ Simulate Precise Timer (2min elapsed)
+        </button>
+        <button class="button" onclick="testCalculationLogic()">
+          🧮 Test Calculation Logic
+        </button>
+        <button class="button" onclick="clearTestData()">
+          🗑️ Clear Test Data
+        </button>
+      </div>
+
+      <div class="test-section">
+        <h3>✅ Expected Results</h3>
+        <div class="code">
+          ✅ Timer started 2min ago: Both show ~0h 2m<br />
+          ✅ Timer started 15min ago: Both show ~0h 15m<br />
+          ✅ Page refresh: Values remain identical<br />
+          ✅ No backwards calculations or wrong values<br />
+          ✅ Mathematical precision in all cases
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🐛 Debug Output</h3>
+        <div id="debug-output" class="code">
+          Check browser console for detailed logs
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function checkValues() {
+        document.getElementById("debug-output").innerHTML =
+          "Checking values...";
+
+        // Check localStorage
+        let timerState = {};
+        try {
+          timerState = JSON.parse(
+            localStorage.getItem("pomodoroState") || "{}"
+          );
+        } catch (e) {
+          document.getElementById("debug-output").innerHTML =
+            "❌ Error parsing timer state";
+          return;
+        }
+
+        // Check main window
+        if (window.opener && !window.opener.closed) {
+          try {
+            const mainDoc = window.opener.document;
+
+            // Find PomodoroTimer focus time
+            const pomodoroStats = mainDoc.querySelectorAll(
+              ".bg-background\\/50.backdrop-blur"
+            );
+            let pomodoroValue = "Not found";
+            pomodoroStats.forEach((stat) => {
+              if (stat.textContent.includes("Focus Time")) {
+                const value = stat.querySelector(".text-2xl");
+                if (value) pomodoroValue = value.textContent.trim();
+              }
+            });
+
+            // Find QuickStats focus time
+            const quickStatsCards =
+              mainDoc.querySelectorAll("[data-focus-time]");
+            let quickStatsValue = "Not found";
+            quickStatsCards.forEach((card) => {
+              const label = card.querySelector(".text-sm");
+              if (label && label.textContent.includes("Focus Time")) {
+                const value = card.querySelector(".text-3xl");
+                if (value) quickStatsValue = value.textContent.trim();
+              }
+            });
+
+            document.getElementById("pomodoro-display").innerHTML =
+              pomodoroValue;
+            document.getElementById("quickstats-display").innerHTML =
+              quickStatsValue;
+
+            // Check consistency
+            const pomodoroNum = parseFloat(
+              pomodoroValue.replace(/[^\d.]/g, "")
+            );
+            const quickStatsNum = parseFloat(
+              quickStatsValue.replace(/[^\d.]/g, "")
+            );
+
+            const isConsistent = Math.abs(pomodoroNum - quickStatsNum) < 0.1;
+
+            const statusEl = document.getElementById("consistency-status");
+            statusEl.className = `status ${isConsistent ? "pass" : "fail"}`;
+            statusEl.innerHTML = isConsistent
+              ? "✅ Values are mathematically consistent!"
+              : `❌ Values differ by ${Math.abs(
+                  pomodoroNum - quickStatsNum
+                ).toFixed(1)}h`;
+
+            // Show calculation breakdown
+            showCalculationBreakdown(timerState);
+          } catch (e) {
+            document.getElementById("debug-output").innerHTML =
+              "❌ Cannot access main window: " + e.message;
+          }
+        } else {
+          document.getElementById("debug-output").innerHTML =
+            "❌ Main app window not found. Open http://localhost:8082 first.";
+        }
+      }
+
+      function showCalculationBreakdown(timerState) {
+        if (!timerState.startTime) {
+          document.getElementById("calculation-breakdown").innerHTML =
+            "No active timer session";
+          return;
+        }
+
+        const now = Date.now();
+        const elapsedMs = now - timerState.startTime;
+        const elapsedSeconds = Math.floor(elapsedMs / 1000);
+        const sessionDurationSeconds = timerState.focusMinutes * 60;
+        const actualElapsedSeconds = Math.min(
+          elapsedSeconds,
+          sessionDurationSeconds
+        );
+        const currentSessionProgress = Math.floor(actualElapsedSeconds / 60);
+
+        const breakdown = `
+🎯 CALCULATION BREAKDOWN:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Start Time: ${new Date(timerState.startTime).toLocaleTimeString()}
+Current Time: ${new Date(now).toLocaleTimeString()}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+focusMinutes (from timer): ${timerState.focusMinutes}
+Session Duration: ${sessionDurationSeconds} seconds (${
+          timerState.focusMinutes
+        } minutes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Elapsed Time: ${elapsedSeconds} seconds
+Actual Elapsed: ${actualElapsedSeconds} seconds (MIN bound)
+Current Session Progress: ${currentSessionProgress} minutes
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Formula: MIN(${elapsedSeconds}, ${sessionDurationSeconds}) / 60 = ${currentSessionProgress}
+            `.trim();
+
+        document.getElementById("calculation-breakdown").innerHTML = breakdown;
+      }
+
+      function simulatePreciseTimer() {
+        // Simulate a timer that started exactly 2 minutes ago
+        const twoMinutesAgo = Date.now() - 2 * 60 * 1000;
+        const timerState = {
+          mode: "focus",
+          timeLeft: 1380, // 23 minutes remaining (25 - 2)
+          isActive: true,
+          focusMinutes: 25,
+          breakMinutes: 5,
+          soundEnabled: true,
+          volume: 70,
+          completedSessions: 0,
+          startTime: twoMinutesAgo,
+        };
+        localStorage.setItem("pomodoroState", JSON.stringify(timerState));
+
+        // Dispatch event
+        if (window.opener) {
+          window.opener.dispatchEvent(new CustomEvent("timerStateChange"));
+        }
+
+        document.getElementById("debug-output").innerHTML =
+          '✅ Simulated timer started 2 minutes ago\nClick "Check Current Values" to verify calculation';
+        setTimeout(checkValues, 1000);
+      }
+
+      function testCalculationLogic() {
+        const testCases = [
+          { elapsed: 60, duration: 1500, expected: 1 }, // 1 minute elapsed
+          { elapsed: 120, duration: 1500, expected: 2 }, // 2 minutes elapsed
+          { elapsed: 900, duration: 1500, expected: 15 }, // 15 minutes elapsed
+          { elapsed: 1800, duration: 1500, expected: 25 }, // Session complete (capped)
+        ];
+
+        let results = "🧪 CALCULATION LOGIC TESTS:\n";
+        results += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+
+        testCases.forEach((test, i) => {
+          const actual = Math.floor(Math.min(test.elapsed, test.duration) / 60);
+          const pass = actual === test.expected;
+          results += `Test ${i + 1}: MIN(${test.elapsed}, ${
+            test.duration
+          }) / 60 = ${actual} ${pass ? "✅" : "❌"} (expected ${
+            test.expected
+          })\n`;
+        });
+
+        document.getElementById("debug-output").innerHTML = results;
+      }
+
+      function clearTestData() {
+        localStorage.removeItem("pomodoroState");
+        document.getElementById("debug-output").innerHTML =
+          "🗑️ Cleared timer state";
+        setTimeout(checkValues, 500);
+      }
+
+      // Auto-check on load
+      window.onload = () => {
+        setTimeout(checkValues, 1000);
+      };
+
+      // Periodic checks
+      setInterval(checkValues, 2000);
+    </script>
+  </body>
+</html>

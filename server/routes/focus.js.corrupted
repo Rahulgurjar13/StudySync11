@@ -1,0 +1,366 @@
+import express from 'express';
+import FocusSession from '../models/FocusSession.js';
+import { authenticateToken } from '../middleware/auth.js';
+import { awardFocusSessionPoints, awardStreakBonus } from '../utils/pointSystem.js';
+
+const router = express.Router();
+
+// Get focus da    if (focusSession) {
+      // REPLACE (not add) active minutes with the latest value
+      // Auto-save sends cumulative time, not incremental
+      // Only when completing a full session do we actually ADD
+      focusSession.focusMinutes = minutesToSave; // REPLACE with latest
+      focusSession.activeSessionMinutes = 0; // Keep cleared
+      focusSession.achieved = focusSession.focusMinutes >= 120;
+      focusSession.lastUpdated = new Date();
+    } else {
+      // Create new session with completed minutes
+      focusSession = new FocusSession({
+        userId: req.user.id,
+        date: today,
+        focusMinutes: minutesToSave, // Save as completed
+        activeSessionMinutes: 0, // No active session
+        sessionsCompleted: 0, // Not a full session yet
+        achieved: minutesToSave >= 120,
+        sessionType: 'focus',
+        lastUpdated: new Date()
+      });
+    }
+
+    await focusSession.save();
+
+    console.log(`[FOCUS] Active session saved:`, {
+      completedMinutes: focusSession.focusMinutes,
+      activeMinutes: focusSession.activeSessionMinutes,
+      totalMinutes: focusSession.focusMinutes + focusSession.activeSessionMinutes
+    });
+
+    res.json({
+      success: true,
+      focusMinutes: focusSession.focusMinutes,
+      activeMinutes: focusSession.activeSessionMinutes,
+      totalMinutes: focusSession.focusMinutes + focusSession.activeSessionMinutes,
+      message: 'Active session saved'
+    });
+  } catch (error) {
+    console.error('Save active session error:', error);
+    res.status(500).json({ error: 'Failed to save active session' });
+  }
+});
+
+// Get month data
+router.get('/month/:year/:month', authenticateToken, async (req, res) => {
+  try {
+    const { year, month } = req.params;
+    const startDate = new Date(parseInt(year), parseInt(month), 1);
+    const endDate = new Date(parseInt(year), parseInt(month) + 1, 0, 23, 59, 59);
+
+    const focusSessions = await FocusSession.find({
+      userId: req.user.id,
+      date: {
+        $gte: startDate,
+        $lte: endDate
+      }
+    }).sort({ date: 1 });
+
+    res.json({ sessions: focusSessions });
+  } catch (error) {
+    console.error('Get focus sessions error:', error);
+    res.status(500).json({ error: 'Failed to fetch focus sessions' });
+  }
+});
+
+// Get all focus data for user (for stats)
+router.get('/all', authenticateToken, async (req, res) => {
+  try {
+    const focusSessions = await FocusSession.find({
+      userId: req.user.id
+    }).sort({ date: -1 });
+
+    res.json({ sessions: focusSessions });
+  } catch (error) {
+    console.error('Get all focus sessions error:', error);
+    res.status(500).json({ error: 'Failed to fetch focus sessions' });
+  }
+});
+
+// Record a completed focus session
+router.post('/session', authenticateToken, async (req, res) => {
+  try {
+    const { focusMinutes, sessionType } = req.body;
+    
+    if (!focusMinutes || focusMinutes <= 0) {
+      return res.status(400).json({ error: 'Invalid focus time' });
+    }
+
+    // Get today's date (normalized to start of day)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find or create today's focus session
+    let focusSession = await FocusSession.findOne({
+      userId: req.user.id,
+      date: today
+    });
+
+    if (focusSession) {
+      // Update existing session
+      focusSession.focusMinutes += focusMinutes;
+      focusSession.sessionsCompleted += 1;
+      focusSession.achieved = focusSession.focusMinutes >= 120;
+      focusSession.activeSessionMinutes = 0; // Clear active session since it's now completed
+    } else {
+      // Create new session
+      focusSession = new FocusSession({
+        userId: req.user.id,
+        date: today,
+        focusMinutes: focusMinutes,
+        sessionsCompleted: 1,
+        sessionType: sessionType || 'focus',
+        achieved: focusMinutes >= 120,
+        activeSessionMinutes: 0
+      });
+    }
+
+    await focusSession.save();
+
+    console.log(`[FOCUS] Session completed for user ${req.user.id}:`, {
+      sessionMinutes: focusMinutes,
+      totalCompleted: focusSession.focusMinutes,
+      sessionsCount: focusSession.sessionsCompleted,
+      clearedActive: true
+    });
+
+    // 🎯 AWARD POINTS FOR FOCUS SESSION (Anti-cheat built-in)
+    let pointsResult = null;
+    try {
+      pointsResult = await awardFocusSessionPoints(
+        req.user.id,
+        focusSession._id.toString(),
+        focusMinutes
+      );
+      
+      if (pointsResult.success) {
+        console.log(`[POINTS] Awarded ${pointsResult.points} points for ${focusMinutes} minute session`);
+      } else {
+        console.log(`[POINTS] Not awarded: ${pointsResult.reason}`);
+      }
+    } catch (pointError) {
+      console.error('[POINTS] Error awarding points:', pointError);
+      // Don't fail the request if points fail
+    }
+
+    res.json({ 
+      session: focusSession,
+      focusMinutes: focusSession.focusMinutes,
+      sessionsCompleted: focusSession.sessionsCompleted,
+      achieved: focusSession.achieved,
+      message: 'Focus session recorded successfully',
+      points: pointsResult?.success ? {
+        awarded: pointsResult.points,
+        newBalance: pointsResult.newBalance,
+        level: pointsResult.level
+      } : null
+    });
+  } catch (error) {
+    console.error('Record focus session error:', error);
+    res.status(500).json({ error: 'Failed to record focus session' });
+  }
+});
+
+// Get current streak
+router.get('/streak', authenticateToken, async (req, res) => {
+  try {
+    const sessions = await FocusSession.find({
+      userId: req.user.id,
+      achieved: true
+    }).sort({ date: -1 });
+
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let tempStreak = 0;
+    let previousDate = null;
+
+    for (const session of sessions) {
+      const sessionDate = new Date(session.date);
+      
+      if (previousDate === null) {
+        // First session
+        tempStreak = 1;
+        currentStreak = 1;
+      } else {
+        const dayDiff = Math.floor((previousDate - sessionDate) / (1000 * 60 * 60 * 24));
+        
+        if (dayDiff === 1) {
+          // Consecutive day
+          tempStreak++;
+          if (currentStreak > 0) {
+            currentStreak++;
+          }
+        } else {
+          // Streak broken
+          tempStreak = 1;
+          if (currentStreak > 0) {
+            currentStreak = 0;
+          }
+        }
+      }
+
+      longestStreak = Math.max(longestStreak, tempStreak);
+      previousDate = sessionDate;
+    }
+
+    res.json({ 
+      currentStreak,
+      longestStreak,
+      totalDaysAchieved: sessions.length
+    });
+  } catch (error) {
+    console.error('Get streak error:', error);
+    res.status(500).json({ error: 'Failed to calculate streak' });
+  }
+});
+
+// Get monthly stats
+router.get('/stats/:year/:month', authenticateToken, async (req, res) => {
+  try {
+    const { year, month } = req.params;
+    const startDate = new Date(parseInt(year), parseInt(month), 1);
+    const endDate = new Date(parseInt(year), parseInt(month) + 1, 0, 23, 59, 59);
+
+    const sessions = await FocusSession.find({
+      userId: req.user.id,
+      date: {
+        $gte: startDate,
+        $lte: endDate
+      }
+    });
+
+    const totalMinutes = sessions.reduce((sum, s) => sum + s.focusMinutes, 0);
+    const totalSessions = sessions.reduce((sum, s) => sum + s.sessionsCompleted, 0);
+    const daysAchieved = sessions.filter(s => s.achieved).length;
+
+    res.json({
+      totalMinutes,
+      totalSessions,
+      daysAchieved,
+      totalDays: sessions.length
+    });
+  } catch (error) {
+    console.error('Get monthly stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch monthly stats' });
+  }
+});
+
+// Get today's progress - returns only completed focus minutes from database
+router.get('/today', authenticateToken, async (req, res) => {
+  try {
+    // Get today's date (normalized to start of day in UTC)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find today's focus session
+    const focusSession = await FocusSession.findOne({
+      userId: req.user.id,
+      date: today
+    });
+
+    const focusMinutes = focusSession?.focusMinutes || 0;
+    const sessionsCompleted = focusSession?.sessionsCompleted || 0;
+    const activeSessionMinutes = focusSession?.activeSessionMinutes || 0;
+    const totalMinutes = focusMinutes + activeSessionMinutes;
+    const achieved = totalMinutes >= 120;
+
+    console.log(`[FOCUS] Today's progress for user ${req.user.id}:`, {
+      completedMinutes: focusMinutes,
+      activeMinutes: activeSessionMinutes,
+      totalMinutes,
+      sessionsCompleted,
+      achieved,
+      date: today.toISOString()
+    });
+
+    res.json({
+      focusMinutes: focusMinutes, // Return ONLY completed minutes (NOT total)
+      completedMinutes: focusMinutes,
+      activeMinutes: activeSessionMinutes,
+      sessionsCompleted,
+      achieved,
+      date: today.toISOString()
+    });
+  } catch (error) {
+    console.error('Get today progress error:', error);
+    res.status(500).json({ error: 'Failed to fetch today progress' });
+  }
+});
+
+// Auto-save active session in real-time (or when pausing)
+router.post('/active-session', authenticateToken, async (req, res) => {
+  try {
+    const { elapsedMinutes, activeMinutes } = req.body;
+    
+    // Use activeMinutes if provided, otherwise use elapsedMinutes
+    const minutesToSave = activeMinutes !== undefined ? activeMinutes : elapsedMinutes;
+    
+    if (minutesToSave === undefined || minutesToSave < 0) {
+      return res.status(400).json({ error: 'Invalid elapsed time' });
+    }
+
+    console.log(`[FOCUS] Saving active session for user ${req.user.id}:`, {
+      activeMinutes: minutesToSave
+    });
+
+    // Get today's date (normalized to start of day)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find or create today's focus session
+    let focusSession = await FocusSession.findOne({
+      userId: req.user.id,
+      date: today
+    });
+
+    if (focusSession) {
+      // REPLACE (not add) active minutes with the latest cumulative value
+      // Auto-save and pause both send total elapsed time, not incremental
+      // Only recordSession() (complete) should ADD to existing value
+      focusSession.focusMinutes = minutesToSave; // REPLACE with latest
+      focusSession.activeSessionMinutes = 0; // Keep cleared
+      focusSession.achieved = focusSession.focusMinutes >= 120;
+      focusSession.lastUpdated = new Date();
+    } else {
+      // Create new session with completed minutes
+      focusSession = new FocusSession({
+        userId: req.user.id,
+        date: today,
+        focusMinutes: minutesToSave, // Save as completed
+        activeSessionMinutes: 0, // No active session
+        sessionsCompleted: 0, // Not a full session yet
+        achieved: minutesToSave >= 120,
+        sessionType: 'focus',
+        lastUpdated: new Date()
+      });
+    }
+
+    await focusSession.save();
+
+    console.log(`[FOCUS] Active session saved:`, {
+      completedMinutes: focusSession.focusMinutes,
+      activeMinutes: focusSession.activeSessionMinutes,
+      totalMinutes: focusSession.focusMinutes + focusSession.activeSessionMinutes
+    });
+
+    res.json({
+      success: true,
+      focusMinutes: focusSession.focusMinutes,
+      activeMinutes: focusSession.activeSessionMinutes,
+      totalMinutes: focusSession.focusMinutes + focusSession.activeSessionMinutes,
+      message: 'Active session saved'
+    });
+  } catch (error) {
+    console.error('Save active session error:', error);
+    res.status(500).json({ error: 'Failed to save active session' });
+  }
+});
+
+export default router;

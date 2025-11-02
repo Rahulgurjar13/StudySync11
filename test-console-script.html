@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Focus Time Test - Run in Browser Console</title>
+    <style>
+      body {
+        font-family: monospace;
+        padding: 20px;
+        background: #1e1e1e;
+        color: #00ff00;
+      }
+      .test {
+        margin: 10px 0;
+        padding: 10px;
+        background: #2d2d2d;
+      }
+      .pass {
+        border-left: 4px solid #00ff00;
+      }
+      .fail {
+        border-left: 4px solid #ff0000;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧪 Focus Time Refresh Test</h1>
+    <p>
+      Copy and paste this script into your browser console while on
+      http://localhost:8080
+    </p>
+
+    <pre>
+// ===== FOCUS TIME REFRESH TEST =====
+console.clear();
+console.log('🧪 Starting Focus Time Test...\n');
+
+// Test 1: Check if database endpoint exists
+console.log('📡 Test 1: Checking backend endpoint...');
+fetch('http://localhost:3001/api/focus/today', {
+    headers: {
+        'Authorization': 'Bearer ' + localStorage.getItem('authToken')
+    }
+})
+.then(r => r.json())
+.then(data => {
+    console.log('✅ Backend endpoint works:', data);
+    console.log('   DB Focus Minutes:', data.focusMinutes);
+})
+.catch(err => {
+    console.error('❌ Backend endpoint failed:', err.message);
+});
+
+// Test 2: Check localStorage state
+console.log('\n📦 Test 2: Checking localStorage...');
+const state = JSON.parse(localStorage.getItem('pomodoroState') || '{}');
+console.log('Timer State:', {
+    isActive: state.isActive,
+    mode: state.mode,
+    timeLeft: state.timeLeft + ' seconds',
+    startTime: state.startTime ? new Date(state.startTime).toLocaleTimeString() : 'Not set',
+    focusMinutes: state.focusMinutes
+});
+
+// Test 3: Calculate what focus time SHOULD be
+console.log('\n🧮 Test 3: Calculating expected focus time...');
+if (state.isActive && state.mode === 'focus' && state.startTime) {
+    const now = Date.now();
+    const elapsedMs = now - state.startTime;
+    const elapsedMinutes = Math.floor(elapsedMs / 1000 / 60);
+    console.log('⏱️ Timer has been running for:', elapsedMinutes, 'minutes');
+    console.log('   Started at:', new Date(state.startTime).toLocaleTimeString());
+    console.log('   Current time:', new Date(now).toLocaleTimeString());
+} else {
+    console.log('⏸️ Timer is not currently active');
+}
+
+// Test 4: Check for focusTimeBase (should NOT exist after fix)
+console.log('\n🔍 Test 4: Checking for old focusTimeBase...');
+const oldBase = localStorage.getItem('focusTimeBase');
+if (oldBase) {
+    console.warn('⚠️ WARNING: focusTimeBase still exists! Value:', oldBase);
+    console.log('   Run this to remove it: localStorage.removeItem("focusTimeBase")');
+} else {
+    console.log('✅ Good! focusTimeBase does not exist (as expected after fix)');
+}
+
+// Test 5: Simulate a refresh
+console.log('\n🔄 Test 5: Simulating page refresh calculation...');
+if (state.isActive && state.startTime) {
+    const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+    const remainingTime = Math.max(0, state.timeLeft - elapsed);
+    const newStartTime = remainingTime > 0 ? Date.now() - (state.timeLeft - remainingTime) * 1000 : 0;
+    
+    console.log('After refresh would have:');
+    console.log('   Elapsed:', elapsed, 'seconds');
+    console.log('   Remaining:', remainingTime, 'seconds (', Math.floor(remainingTime / 60), 'min )');
+    console.log('   Recalculated startTime:', new Date(newStartTime).toLocaleTimeString());
+    console.log('   Original startTime:', new Date(state.startTime).toLocaleTimeString());
+    console.log('   Match?', Math.abs(newStartTime - state.startTime) < 1000 ? '✅ Yes' : '❌ No');
+}
+
+console.log('\n' + '='.repeat(50));
+console.log('✅ Test complete! Check results above.');
+console.log('='.repeat(50));
+    </pre>
+
+    <h2>🔧 Manual Test Steps:</h2>
+    <ol>
+      <li>Go to http://localhost:8080</li>
+      <li>Open browser console (F12)</li>
+      <li>Start a focus timer</li>
+      <li>Wait 2 minutes</li>
+      <li>Note the focus time value (should be ~0.03h)</li>
+      <li>Press F5 to refresh</li>
+      <li>Check if focus time is still ~0.03h (NOT 0.0h)</li>
+      <li>If it changed, the fix is not applied correctly</li>
+    </ol>
+
+    <h2>🐛 Debug Commands:</h2>
+    <pre>
+// Check current state
+console.log(JSON.parse(localStorage.getItem('pomodoroState')));
+
+// Clear everything and start fresh
+localStorage.clear();
+location.reload();
+
+// Remove old focusTimeBase
+localStorage.removeItem('focusTimeBase');
+
+// Check database value
+fetch('http://localhost:3001/api/focus/today', {
+    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('authToken') }
+}).then(r => r.json()).then(console.log);
+    </pre>
+  </body>
+</html>

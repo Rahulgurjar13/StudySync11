@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Focus Time Consistency Test</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        max-width: 1000px;
+        margin: 50px auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+      h1 {
+        margin-top: 0;
+        text-align: center;
+      }
+      .test-section {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 20px;
+        border-radius: 15px;
+        margin: 20px 0;
+      }
+      .status {
+        padding: 15px;
+        border-radius: 10px;
+        margin: 10px 0;
+        font-weight: bold;
+        font-size: 16px;
+      }
+      .status.pass {
+        background: rgba(16, 185, 129, 0.2);
+        border: 2px solid #10b981;
+      }
+      .status.fail {
+        background: rgba(239, 68, 68, 0.2);
+        border: 2px solid #ef4444;
+      }
+      .status.info {
+        background: rgba(59, 130, 246, 0.2);
+        border: 2px solid #3b82f6;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 20px;
+        margin: 5px;
+        font-size: 14px;
+        font-weight: bold;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: white;
+        color: #667eea;
+      }
+      .button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+      .code {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 15px;
+        border-radius: 8px;
+        font-family: "Monaco", "Courier New", monospace;
+        font-size: 12px;
+        margin: 10px 0;
+        overflow-x: auto;
+      }
+      .comparison {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin: 20px 0;
+      }
+      .component {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 10px;
+      }
+      .component h3 {
+        margin-top: 0;
+        color: #fbbf24;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎯 Focus Time Consistency Test</h1>
+      <p>
+        <strong>Testing:</strong> PomodoroTimer and QuickStats show identical
+        focus time values
+      </p>
+
+      <div class="test-section">
+        <h3>📋 Test Results</h3>
+        <div id="test-results"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>🔍 Current Values Comparison</h3>
+        <div class="comparison">
+          <div class="component">
+            <h3>PomodoroTimer</h3>
+            <div id="pomodoro-display">Loading...</div>
+          </div>
+          <div class="component">
+            <h3>QuickStats</h3>
+            <div id="quickstats-display">Loading...</div>
+          </div>
+        </div>
+        <div id="consistency-status" class="status info">
+          Checking consistency...
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🧪 Test Actions</h3>
+        <button class="button" onclick="checkConsistency()">
+          🔍 Check Current Values
+        </button>
+        <button class="button" onclick="simulateTimerStart()">
+          ▶️ Simulate Timer Start
+        </button>
+        <button class="button" onclick="simulateProgress()">
+          ⏱️ Simulate 15min Progress
+        </button>
+        <button class="button" onclick="simulateCompletion()">
+          ✅ Simulate Session Complete
+        </button>
+        <button class="button" onclick="clearTestData()">
+          🗑️ Clear Test Data
+        </button>
+      </div>
+
+      <div class="test-section">
+        <h3>📊 Expected Behavior</h3>
+        <div class="code">
+          ✅ Timer not started: Both show "0.0h" or "0h 0m"<br />
+          ✅ After 15min active: Both show "~0.3h" or "~0h 15m"<br />
+          ✅ After completion: Both show "0.4h" or "0h 25m"<br />
+          ✅ Real-time sync: Values update every 5 seconds<br />
+          ✅ Page refresh: Values remain consistent
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🐛 Debug Info</h3>
+        <div id="debug-info" class="code">
+          Click "Check Current Values" to see debug info
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let testResults = document.getElementById("test-results");
+      let consistencyStatus = document.getElementById("consistency-status");
+      let debugInfo = document.getElementById("debug-info");
+
+      function addTestResult(test, passed, details = "") {
+        const result = document.createElement("div");
+        result.className = `status ${passed ? "pass" : "fail"}`;
+        result.innerHTML = `${passed ? "✅" : "❌"} ${test}${
+          details ? ": " + details : ""
+        }`;
+        testResults.appendChild(result);
+      }
+
+      function checkConsistency() {
+        debugInfo.innerHTML = "Loading debug info...";
+
+        // Check localStorage
+        let timerState = {};
+        try {
+          timerState = JSON.parse(
+            localStorage.getItem("pomodoroState") || "{}"
+          );
+        } catch (e) {
+          debugInfo.innerHTML += "\n❌ Error parsing timer state";
+          return;
+        }
+
+        // Check if main window is open
+        if (window.opener && !window.opener.closed) {
+          try {
+            // Try to access the main app's components
+            const mainDoc = window.opener.document;
+
+            // Find PomodoroTimer focus time
+            const pomodoroStats = mainDoc.querySelectorAll(
+              ".bg-background\\/50.backdrop-blur"
+            );
+            let pomodoroValue = "Not found";
+            pomodoroStats.forEach((stat) => {
+              if (stat.textContent.includes("Focus Time")) {
+                const value = stat.querySelector(".text-2xl");
+                if (value) pomodoroValue = value.textContent.trim();
+              }
+            });
+
+            // Find QuickStats focus time
+            const quickStatsCards =
+              mainDoc.querySelectorAll("[data-focus-time]");
+            let quickStatsValue = "Not found";
+            quickStatsCards.forEach((card) => {
+              const label = card.querySelector(".text-sm");
+              if (label && label.textContent.includes("Focus Time")) {
+                const value = card.querySelector(".text-3xl");
+                if (value) quickStatsValue = value.textContent.trim();
+              }
+            });
+
+            document.getElementById("pomodoro-display").innerHTML =
+              pomodoroValue;
+            document.getElementById("quickstats-display").innerHTML =
+              quickStatsValue;
+
+            // Check consistency
+            const pomodoroNum = parseFloat(
+              pomodoroValue.replace(/[^\d.]/g, "")
+            );
+            const quickStatsNum = parseFloat(
+              quickStatsValue.replace(/[^\d.]/g, "")
+            );
+
+            const isConsistent = Math.abs(pomodoroNum - quickStatsNum) < 0.1;
+
+            consistencyStatus.className = `status ${
+              isConsistent ? "pass" : "fail"
+            }`;
+            consistencyStatus.innerHTML = isConsistent
+              ? "✅ Values are consistent!"
+              : `❌ Values differ by ${Math.abs(
+                  pomodoroNum - quickStatsNum
+                ).toFixed(1)}h`;
+
+            // Debug info
+            debugInfo.innerHTML = `
+Timer State: ${JSON.stringify(timerState, null, 2)}
+PomodoroTimer: ${pomodoroValue}
+QuickStats: ${quickStatsValue}
+Difference: ${Math.abs(pomodoroNum - quickStatsNum).toFixed(1)}h
+Consistent: ${isConsistent}
+                    `.trim();
+          } catch (e) {
+            debugInfo.innerHTML = "❌ Cannot access main window: " + e.message;
+            document.getElementById("pomodoro-display").innerHTML =
+              "Cannot access";
+            document.getElementById("quickstats-display").innerHTML =
+              "Cannot access";
+          }
+        } else {
+          debugInfo.innerHTML =
+            "❌ Main app window not found. Please open http://localhost:5173 first.";
+          document.getElementById("pomodoro-display").innerHTML =
+            "Main window not open";
+          document.getElementById("quickstats-display").innerHTML =
+            "Main window not open";
+        }
+      }
+
+      function simulateTimerStart() {
+        // Simulate starting a timer by setting localStorage
+        const timerState = {
+          mode: "focus",
+          timeLeft: 1500, // 25 minutes
+          isActive: true,
+          focusMinutes: 25,
+          breakMinutes: 5,
+          soundEnabled: true,
+          volume: 70,
+          completedSessions: 0,
+          startTime: Date.now(),
+        };
+        localStorage.setItem("pomodoroState", JSON.stringify(timerState));
+
+        // Dispatch event to trigger updates
+        if (window.opener) {
+          window.opener.dispatchEvent(new CustomEvent("timerStateChange"));
+        }
+
+        addTestResult(
+          "Timer Start Simulation",
+          true,
+          "Set 25min focus session"
+        );
+        setTimeout(checkConsistency, 1000);
+      }
+
+      function simulateProgress() {
+        // Simulate 15 minutes elapsed
+        let timerState = {};
+        try {
+          timerState = JSON.parse(
+            localStorage.getItem("pomodoroState") || "{}"
+          );
+          if (timerState.startTime) {
+            // Set start time to 15 minutes ago
+            timerState.startTime = Date.now() - 15 * 60 * 1000;
+            timerState.timeLeft = 1500 - 15 * 60; // 10 minutes remaining
+            localStorage.setItem("pomodoroState", JSON.stringify(timerState));
+
+            if (window.opener) {
+              window.opener.dispatchEvent(new CustomEvent("timerStateChange"));
+            }
+
+            addTestResult(
+              "Progress Simulation",
+              true,
+              "Simulated 15min elapsed"
+            );
+            setTimeout(checkConsistency, 1000);
+          }
+        } catch (e) {
+          addTestResult("Progress Simulation", false, "No timer state found");
+        }
+      }
+
+      function simulateCompletion() {
+        // Simulate session completion
+        if (window.opener && !window.opener.closed) {
+          // Trigger the completion event
+          window.opener.dispatchEvent(new CustomEvent("focusSessionComplete"));
+          addTestResult(
+            "Completion Simulation",
+            true,
+            "Triggered completion event"
+          );
+          setTimeout(checkConsistency, 2000);
+        } else {
+          addTestResult(
+            "Completion Simulation",
+            false,
+            "Main window not accessible"
+          );
+        }
+      }
+
+      function clearTestData() {
+        localStorage.removeItem("pomodoroState");
+        addTestResult("Data Clear", true, "Cleared timer state");
+        setTimeout(checkConsistency, 500);
+      }
+
+      // Auto-check on load
+      window.onload = () => {
+        setTimeout(checkConsistency, 1000);
+      };
+
+      // Periodic checks
+      setInterval(checkConsistency, 5000);
+    </script>
+  </body>
+</html>
