@@ -73,27 +73,31 @@ Deployment Date: _____________________
 ✅ Homepage loads without errors  
 ✅ Can create account  
 ✅ Can start focus timer  
-✅ Data persists after page refresh  
+✅ Data persists after page refresh
 
 ## 🆘 Common Issues
 
 ### Build Failed
+
 - Check if all dependencies are in package.json
 - Verify build command is correct
 - Check Node version compatibility
 
 ### 503 Service Unavailable
+
 - Server failed to start
 - Check MongoDB connection
 - Verify environment variables
 - Check server logs for errors
 
 ### CORS Errors
+
 - Update CORS in server/index.js with your Render URL
 - Push to GitHub
 - Wait for auto-redeploy
 
 ### Database Connection Failed
+
 - Verify MongoDB connection string
 - Check IP whitelist (must be 0.0.0.0/0)
 - Verify database user credentials

@@ -43,11 +43,13 @@ NODE_ENV=production
 ### Setup (10 minutes)
 
 **Step 1:** Deploy Backend to Railway
+
 - railway.app → New Project → Deploy backend
 - Add: `MONGODB_URI`, `JWT_SECRET`
 - Get URL: `https://your-app.up.railway.app`
 
 **Step 2:** Deploy Frontend to Vercel
+
 - vercel.com → Import repository
 - Add environment variable:
   ```
@@ -63,6 +65,7 @@ NODE_ENV=production
 
 **Step 1:** Create MongoDB Atlas (free tier)
 **Step 2:** Deploy to Render
+
 - render.com → New Web Service
 - Build: `npm install && npm run build && cd server && npm install`
 - Start: `cd server && npm start`
@@ -94,7 +97,7 @@ VITE_API_URL=https://your-backend-url.up.railway.app
 ✅ Study rooms with video chat  
 ✅ Task management  
 ✅ Points & leveling  
-✅ Partnership features  
+✅ Partnership features
 
 All working perfectly with your deployment! 🚀
 
@@ -103,6 +106,7 @@ All working perfectly with your deployment! 🚀
 ## 🆘 Need Help?
 
 Read the full guides:
+
 - **DEPLOYMENT_GUIDE.md** - Step-by-step Railway + Vercel
 - **DEPLOYMENT_OPTIONS.md** - Compare all platforms
 
