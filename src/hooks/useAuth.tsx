@@ -33,18 +33,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const session = api.auth.getSession();
         if (session.token && session.user) {
-          // Verify token is still valid
+          console.log('[AUTH] Checking existing session for user:', session.user.email);
+          // Verify token is still valid by fetching current user from server
           const currentUser = await api.auth.getCurrentUser();
           if (currentUser) {
+            console.log('[AUTH] Session valid for user:', currentUser.email, 'ID:', currentUser.id);
             setUser(currentUser);
           } else {
             // Token invalid, clear storage
+            console.log('[AUTH] Session invalid - clearing data');
             api.auth.logout();
             setUser(null);
           }
+        } else {
+          console.log('[AUTH] No active session found');
+          setUser(null);
         }
       } catch (error) {
-        console.error('Auth check error:', error);
+        console.error('[AUTH] Auth check error:', error);
         api.auth.logout();
         setUser(null);
       } finally {
@@ -57,27 +63,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('[AUTH] Signing in user:', email);
       const data = await api.auth.login(email, password);
+      console.log('[AUTH] Sign in successful for user:', data.user.email, 'ID:', data.user.id);
       setUser(data.user);
     } catch (error) {
-      console.error('Sign in error:', error);
+      console.error('[AUTH] Sign in error:', error);
       throw error;
     }
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
+      console.log('[AUTH] Signing up user:', email);
       const data = await api.auth.register(email, password, fullName);
+      console.log('[AUTH] Sign up successful for user:', data.user.email, 'ID:', data.user.id);
       setUser(data.user);
     } catch (error) {
-      console.error('Sign up error:', error);
+      console.error('[AUTH] Sign up error:', error);
       throw error;
     }
   };
 
   const signOut = () => {
+    console.log('[AUTH] Signing out user:', user?.email);
     api.auth.logout();
     setUser(null);
+    // Force reload to clear all cached data
+    window.location.href = '/auth';
   };
 
   return (

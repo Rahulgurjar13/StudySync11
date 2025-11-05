@@ -31,6 +31,10 @@ const focusSessionSchema = new mongoose.Schema({
     type: Number,
     default: 0 // Current active session in progress
   },
+  sessionStartTime: {
+    type: Date,
+    default: null // When the current active session started
+  },
   lastUpdated: {
     type: Date,
     default: Date.now

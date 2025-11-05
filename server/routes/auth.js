@@ -76,12 +76,14 @@ router.post('/login',
       // Find user
       const user = await User.findOne({ email });
       if (!user) {
+        console.log('[AUTH] Login failed - user not found:', email);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
       // Check password
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
+        console.log('[AUTH] Login failed - invalid password for:', email);
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
@@ -96,6 +98,8 @@ router.post('/login',
         { expiresIn: '7d' }
       );
 
+      console.log('[AUTH] Login successful for user:', email, 'ID:', user._id);
+
       res.json({
         token,
         user: {
@@ -106,7 +110,7 @@ router.post('/login',
         }
       });
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('[AUTH] Login error:', error);
       res.status(500).json({ error: 'Server error during login' });
     }
   }
@@ -119,15 +123,20 @@ router.get('/me', async (req, res) => {
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
+      console.log('[AUTH] /me - No token provided');
       return res.status(401).json({ error: 'No token provided' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('[AUTH] /me - Token decoded for user:', decoded.email, 'ID:', decoded.id);
 
     const user = await User.findById(decoded.id).select('-password');
     if (!user) {
+      console.log('[AUTH] /me - User not found in database:', decoded.id);
       return res.status(404).json({ error: 'User not found' });
     }
+
+    console.log('[AUTH] /me - Returning user data:', user.email, 'ID:', user._id);
 
     res.json({
       user: {
@@ -138,7 +147,7 @@ router.get('/me', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get user error:', error);
+    console.error('[AUTH] /me - Error:', error);
     res.status(401).json({ error: 'Invalid token' });
   }
 });

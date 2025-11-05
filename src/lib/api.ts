@@ -47,6 +47,9 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
 // Auth API
 export const auth = {
   register: async (email: string, password: string, fullName: string) => {
+    // Clear all previous user data before registering
+    localStorage.clear();
+    
     const data = await fetchWithAuth('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, fullName }),
@@ -54,11 +57,15 @@ export const auth = {
     if (data.token) {
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      console.log('[AUTH] User registered:', data.user.email, 'ID:', data.user.id);
     }
     return data;
   },
 
   login: async (email: string, password: string) => {
+    // Clear all previous user data before logging in
+    localStorage.clear();
+    
     const data = await fetchWithAuth('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
@@ -66,13 +73,17 @@ export const auth = {
     if (data.token) {
       localStorage.setItem('authToken', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      console.log('[AUTH] User logged in:', data.user.email, 'ID:', data.user.id);
     }
     return data;
   },
 
   logout: () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
+    console.log('[AUTH] Logging out - clearing all data');
+    // Clear ALL localStorage to prevent data leaks between users
+    localStorage.clear();
+    // Also clear sessionStorage
+    sessionStorage.clear();
   },
 
   getCurrentUser: async () => {
@@ -247,24 +258,32 @@ export const focus = {
       completedMinutes: data.completedMinutes || 0,
       activeMinutes: data.activeMinutes || 0,
       sessionsCompleted: data.sessionsCompleted || 0,
-      achieved: data.achieved || false
+      achieved: data.achieved || false,
+      sessionStartTime: data.sessionStartTime || null,
+      lastUpdated: data.lastUpdated || null
     };
   },
 
   // Update active session minutes (when pausing)
-  updateActiveSession: async (activeMinutes: number) => {
+  updateActiveSession: async (activeMinutes: number, sessionStartTime?: number) => {
     const data = await fetchWithAuth('/focus/active-session', {
       method: 'POST',
-      body: JSON.stringify({ activeMinutes }),
+      body: JSON.stringify({ 
+        activeMinutes,
+        sessionStartTime: sessionStartTime ? new Date(sessionStartTime).toISOString() : null
+      }),
     });
     return data;
   },
 
   // Auto-save active session in real-time
-  autoSaveActiveSession: async (elapsedMinutes: number) => {
+  autoSaveActiveSession: async (elapsedMinutes: number, sessionStartTime?: number) => {
     const data = await fetchWithAuth('/focus/active-session', {
       method: 'POST',
-      body: JSON.stringify({ elapsedMinutes }),
+      body: JSON.stringify({ 
+        elapsedMinutes,
+        sessionStartTime: sessionStartTime ? new Date(sessionStartTime).toISOString() : null
+      }),
     });
     return data;
   },

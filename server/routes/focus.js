@@ -233,6 +233,8 @@ router.get('/today', authenticateToken, async (req, res) => {
     const completedMinutes = focusSession?.focusMinutes || 0;
     const sessionsCompleted = focusSession?.sessionsCompleted || 0;
     const activeSessionMinutes = focusSession?.activeSessionMinutes || 0;
+    const lastUpdated = focusSession?.lastUpdated || null;
+    const sessionStartTime = focusSession?.sessionStartTime || null;
     
     // Total is completed + active (both from database)
     const totalMinutes = completedMinutes + activeSessionMinutes;
@@ -244,6 +246,8 @@ router.get('/today', authenticateToken, async (req, res) => {
       totalMinutes,
       sessionsCompleted,
       achieved,
+      lastUpdated,
+      sessionStartTime,
       date: today.toISOString()
     });
 
@@ -253,6 +257,8 @@ router.get('/today', authenticateToken, async (req, res) => {
       activeMinutes: activeSessionMinutes, // Current active session progress
       sessionsCompleted,
       achieved,
+      lastUpdated: lastUpdated ? lastUpdated.toISOString() : null,
+      sessionStartTime: sessionStartTime ? sessionStartTime.toISOString() : null,
       date: today.toISOString()
     });
   } catch (error) {
@@ -264,7 +270,7 @@ router.get('/today', authenticateToken, async (req, res) => {
 // Auto-save active session in real-time
 router.post('/active-session', authenticateToken, async (req, res) => {
   try {
-    const { elapsedMinutes, activeMinutes } = req.body;
+    const { elapsedMinutes, activeMinutes, sessionStartTime } = req.body;
     
     const minutesToSave = activeMinutes !== undefined ? activeMinutes : elapsedMinutes;
     
@@ -273,7 +279,8 @@ router.post('/active-session', authenticateToken, async (req, res) => {
     }
 
     console.log('[FOCUS] Saving active session for user ' + req.user.id + ':', {
-      activeMinutes: minutesToSave
+      activeMinutes: minutesToSave,
+      sessionStartTime: sessionStartTime ? new Date(sessionStartTime).toISOString() : 'not provided'
     });
 
     const today = new Date();
@@ -291,10 +298,16 @@ router.post('/active-session', authenticateToken, async (req, res) => {
       focusSession.achieved = totalMinutes >= 120;
       focusSession.lastUpdated = new Date();
       
+      // Save session start time if provided
+      if (sessionStartTime) {
+        focusSession.sessionStartTime = new Date(sessionStartTime);
+      }
+      
       console.log('[FOCUS] Updating existing session:', {
         completedMinutes: focusSession.focusMinutes,
         newActiveMinutes: minutesToSave,
-        totalMinutes: totalMinutes
+        totalMinutes: totalMinutes,
+        sessionStartTime: focusSession.sessionStartTime
       });
     } else {
       // First session of the day - create new record with active minutes only
@@ -306,13 +319,15 @@ router.post('/active-session', authenticateToken, async (req, res) => {
         sessionsCompleted: 0,
         achieved: minutesToSave >= 120,
         sessionType: 'focus',
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
+        sessionStartTime: sessionStartTime ? new Date(sessionStartTime) : new Date()
       });
       
       console.log('[FOCUS] Creating new session:', {
         completedMinutes: 0,
         activeMinutes: minutesToSave,
-        totalMinutes: minutesToSave
+        totalMinutes: minutesToSave,
+        sessionStartTime: focusSession.sessionStartTime
       });
     }
 
@@ -323,7 +338,8 @@ router.post('/active-session', authenticateToken, async (req, res) => {
     console.log('[FOCUS] Active session saved successfully:', {
       completedMinutes: focusSession.focusMinutes,
       activeMinutes: focusSession.activeSessionMinutes,
-      totalMinutes: totalMinutes
+      totalMinutes: totalMinutes,
+      sessionStartTime: focusSession.sessionStartTime
     });
 
     res.json({
@@ -331,6 +347,7 @@ router.post('/active-session', authenticateToken, async (req, res) => {
       focusMinutes: focusSession.focusMinutes,
       activeMinutes: focusSession.activeSessionMinutes,
       totalMinutes: totalMinutes,
+      sessionStartTime: focusSession.sessionStartTime ? focusSession.sessionStartTime.toISOString() : null,
       message: 'Active session saved'
     });
   } catch (error) {
