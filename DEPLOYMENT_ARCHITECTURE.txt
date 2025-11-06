@@ -1,0 +1,163 @@
+┌─────────────────────────────────────────────────────────────────┐
+│                    🎯 DEPLOYMENT ARCHITECTURE                   │
+└─────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│  👤 USER (Browser)                                               │
+│  https://studysync11.vercel.app                                  │
+└────────────────┬─────────────────────────────────────────────────┘
+                 │
+                 │ HTTP Requests + WebSocket
+                 │
+                 ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  🌐 VERCEL (Frontend)                                            │
+│  ─────────────────────────────────────────────────────────────   │
+│  • React + Vite Application                                      │
+│  • Static files served globally via CDN                          │
+│  • Environment Variables:                                        │
+│    └─ VITE_API_URL=https://studysync-backend-2.onrender.com    │
+│                                                                  │
+│  Files using VITE_API_URL:                                       │
+│  ✅ src/lib/api.ts                                              │
+│  ✅ src/pages/StudyRoom.tsx (Socket.IO)                         │
+│  ✅ src/components/PomodoroTimer.tsx                            │
+│  ✅ src/components/PointsDisplay.tsx                            │
+└────────────────┬─────────────────────────────────────────────────┘
+                 │
+                 │ API Calls + Socket.IO
+                 │
+                 ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  🚀 RENDER (Backend)                                             │
+│  https://studysync-backend-2.onrender.com                        │
+│  ─────────────────────────────────────────────────────────────   │
+│  • Node.js + Express Server                                      │
+│  • Socket.IO for real-time features                              │
+│  • Environment Variables:                                        │
+│    └─ MONGODB_URI=mongodb+srv://...                             │
+│    └─ JWT_SECRET=your-secret-key                                │
+│    └─ NODE_ENV=production                                       │
+│                                                                  │
+│  API Endpoints:                                                  │
+│  • POST /api/auth/login                                          │
+│  • POST /api/auth/register                                       │
+│  • GET  /api/auth/me                                             │
+│  • GET  /api/tasks                                               │
+│  • POST /api/focus/session                                       │
+│  • GET  /api/focus/today                                         │
+│  • Socket.IO events: join-room, focus-start, etc.               │
+└────────────────┬─────────────────────────────────────────────────┘
+                 │
+                 │ Database Queries
+                 │
+                 ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  🗄️ MONGODB ATLAS (Database)                                     │
+│  mongodb+srv://cluster0.ep5xkwa.mongodb.net/tandem-track-mate   │
+│  ─────────────────────────────────────────────────────────────   │
+│  • Cloud-hosted MongoDB (Free M0 tier)                           │
+│  • Collections:                                                  │
+│    └─ users (authentication)                                     │
+│    └─ tasks (todo items)                                         │
+│    └─ focussessions (timer data)                                │
+│    └─ partnerships (study partners)                             │
+│    └─ pointstransactions (XP system)                            │
+└──────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════
+
+🔄 DATA FLOW EXAMPLE: User Starts Timer
+
+1. 👤 User clicks "Start" on frontend
+   │
+   ▼
+2. 🌐 Vercel Frontend (React)
+   │  const API_URL = import.meta.env.VITE_API_URL
+   │  fetch(`${API_URL}/api/focus/session`, ...)
+   │
+   ▼
+3. 🚀 Render Backend receives:
+   │  POST https://studysync-backend-2.onrender.com/api/focus/session
+   │  { focusMinutes: 25, sessionType: 'focus' }
+   │
+   ▼
+4. 🗄️ MongoDB stores:
+   │  {
+   │    userId: "69072346e5659d514ba0df62",
+   │    date: "2025-11-06",
+   │    focusMinutes: 25,
+   │    sessionStartTime: ISODate("2025-11-06T10:30:00Z")
+   │  }
+   │
+   ▼
+5. 🚀 Backend responds:
+   │  { success: true, session: {...} }
+   │
+   ▼
+6. 🌐 Frontend updates UI:
+   │  Timer starts counting down
+   │
+   ▼
+7. 🔌 Socket.IO emits:
+   │  const socket = io(API_URL)
+   │  socket.emit('focus-start', {...})
+   │
+   ▼
+8. 🚀 Backend broadcasts to partner:
+   │  socket.to(roomCode).emit('partner-focus-start', {...})
+   │
+   ▼
+9. 👥 Partner sees notification:
+   │  "🎯 Partner started focusing!"
+
+═══════════════════════════════════════════════════════════════════
+
+🚨 THE PROBLEM (Before Fix):
+
+Frontend was trying to connect to localhost:
+┌─────────────┐
+│   Vercel    │──X──▶ ws://localhost:3001  ❌ FAILS!
+└─────────────┘       (localhost doesn't exist on Vercel)
+
+✅ THE SOLUTION (After Fix):
+
+Frontend now uses environment variable:
+┌─────────────┐
+│   Vercel    │──✓──▶ wss://studysync-backend-2.onrender.com  ✅
+└─────────────┘       (actual backend URL)
+
+═══════════════════════════════════════════════════════════════════
+
+📝 DEPLOYMENT CHECKLIST:
+
+Backend (Render):
+✅ Deployed at: https://studysync-backend-2.onrender.com
+✅ MongoDB connected
+✅ Environment variables set (MONGODB_URI, JWT_SECRET)
+✅ CORS configured for Vercel domain
+✅ Socket.IO enabled
+
+Frontend (Vercel):
+⏳ Add environment variable: VITE_API_URL
+⏳ Redeploy (automatic on git push)
+⏳ Verify no localhost errors in console
+
+Database (MongoDB Atlas):
+✅ Cluster created and running
+✅ User created with read/write access
+✅ Network access: Allow from anywhere (0.0.0.0/0)
+✅ Connection string in Render backend
+
+═══════════════════════════════════════════════════════════════════
+
+🎯 NEXT STEP:
+
+Go to Vercel → Settings → Environment Variables → Add:
+
+Name:  VITE_API_URL
+Value: https://studysync-backend-2.onrender.com
+
+Then wait 2 minutes for auto-deploy! 🚀
+
+═══════════════════════════════════════════════════════════════════
