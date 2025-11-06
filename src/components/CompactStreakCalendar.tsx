@@ -23,7 +23,15 @@ export const CompactStreakCalendar = () => {
 
   useEffect(() => {
     if (user) {
+      console.log('🔄 CALENDAR: User authenticated, loading all data');
       fetchFocusData();
+      fetchTodayProgress(); // ✅ CRITICAL: Load today's progress immediately on login/mount
+      
+      // ✅ NEW: Poll every 10 seconds to keep progress updated
+      const pollInterval = setInterval(() => {
+        console.log('🔄 CALENDAR: Polling today\'s progress');
+        fetchTodayProgress();
+      }, 10000); // 10 seconds
       
       // Listen for focus session completions
       const handleSessionComplete = () => {
@@ -43,9 +51,14 @@ export const CompactStreakCalendar = () => {
       console.log('👂 CALENDAR: Listening for focus events');
       
       return () => {
+        clearInterval(pollInterval); // ✅ Clear polling on unmount
         window.removeEventListener('focusSessionComplete', handleSessionComplete);
         window.removeEventListener('timerStateChange', handleTimerUpdate);
       };
+    } else {
+      // User logged out - reset today's progress
+      console.log('🔄 CALENDAR: User logged out, resetting progress');
+      setTodayMinutes(0);
     }
   }, [user, currentMonth]);
 

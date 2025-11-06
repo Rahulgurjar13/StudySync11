@@ -225,10 +225,23 @@ router.get('/today', authenticateToken, async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    console.log('[FOCUS] /today - Fetching progress for user:', req.user.id, 'date:', today.toISOString());
+
     const focusSession = await FocusSession.findOne({
       userId: req.user.id,
       date: today
     });
+
+    if (focusSession) {
+      console.log('[FOCUS] /today - Found session:', {
+        id: focusSession._id,
+        focusMinutes: focusSession.focusMinutes,
+        sessionsCompleted: focusSession.sessionsCompleted,
+        activeSessionMinutes: focusSession.activeSessionMinutes
+      });
+    } else {
+      console.log('[FOCUS] /today - No session found for today');
+    }
 
     const completedMinutes = focusSession?.focusMinutes || 0;
     const sessionsCompleted = focusSession?.sessionsCompleted || 0;
