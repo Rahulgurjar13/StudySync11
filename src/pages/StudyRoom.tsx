@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const SOCKET_SERVER_URL = 'http://localhost:3001';
+const SOCKET_SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface Participant {
   userId: string;
