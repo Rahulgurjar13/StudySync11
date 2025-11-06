@@ -42,8 +42,7 @@ export function PointsDisplay() {
 
   const fetchPointsData = async () => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${API_URL}/points/me`, {
+      const response = await fetch('http://localhost:3001/api/points/me', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
@@ -59,8 +58,7 @@ export function PointsDisplay() {
 
   const fetchRecentTransactions = async () => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-      const response = await fetch(`${API_URL}/points/history?limit=10`, {
+      const response = await fetch('http://localhost:3001/api/points/history?limit=10', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
