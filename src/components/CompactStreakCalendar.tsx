@@ -24,8 +24,13 @@ export const CompactStreakCalendar = () => {
   useEffect(() => {
     if (user) {
       console.log('🔄 CALENDAR: User authenticated, loading all data');
+      
+      // ✅ CRITICAL: Load data in the correct order
+      // 1. First load the monthly calendar data
       fetchFocusData();
-      fetchTodayProgress(); // ✅ CRITICAL: Load today's progress immediately on login/mount
+      
+      // 2. Then load today's specific progress (this takes priority)
+      fetchTodayProgress();
       
       // ✅ NEW: Poll every 10 seconds to keep progress updated
       const pollInterval = setInterval(() => {
@@ -87,9 +92,13 @@ export const CompactStreakCalendar = () => {
         mode: calculation.mode
       });
       
+      console.log('✅ CALENDAR: Setting todayMinutes to:', calculation.totalMinutes);
       setTodayMinutes(calculation.totalMinutes);
+      console.log('✅ CALENDAR: todayMinutes has been set');
+      
     } catch (error) {
       console.error("❌ CALENDAR: Error fetching today's progress:", error);
+      // Don't set to 0 on error - keep the previous value
     }
   };
 
@@ -124,11 +133,10 @@ export const CompactStreakCalendar = () => {
       setFocusData(data);
       calculateStreak(data);
       
-      // Get today's minutes
-      const today = new Date();
-      const todayStr = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())).toISOString().split('T')[0];
-      const todayData = data.find(d => d.date === todayStr);
-      setTodayMinutes(todayData?.focusMinutes || 0);
+      // ✅ REMOVED: Don't set todayMinutes here - it's handled by fetchTodayProgress()
+      // This was causing a race condition where todayMinutes would be overwritten to 0
+      // after fetchTodayProgress() had already set it to the correct value
+      
     } catch (error) {
       console.error("Error fetching focus data:", error);
       const mockData = generateMockData();

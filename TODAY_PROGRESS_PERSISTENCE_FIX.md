@@ -8,43 +8,105 @@
 ### What Was Happening:
 1. ✅ Focus sessions **ARE** being saved to the database correctly
 2. ✅ The `/api/focus/today` endpoint **DOES** return the correct data
-3. ❌ The `CompactStreakCalendar` component was **NOT** calling `fetchTodayProgress()` on initial mount after login
-4. ❌ No polling mechanism to keep the progress updated
+3. ❌ The `CompactStreakCalendar` component was calling `fetchTodayProgress()` on mount
+4. ❌ **BUT** `fetchFocusData()` was running AFTER and overwriting `todayMinutes` to 0
+5. ❌ **RACE CONDITION**: Two functions were fighting over the same state variable
 
-### Why It Reset After Logout:
-- When user logs out, `localStorage.clear()` is called (correct behavior to prevent data leaks)
+### The Race Condition:
+```tsx
+// This was the problem:
+useEffect(() => {
+  fetchFocusData();        // 1. Loads monthly data, sets todayMinutes = 0
+  fetchTodayProgress();    // 2. Loads today's data, sets todayMinutes = 1
+  // BUT fetchFocusData is async and might complete AFTER fetchTodayProgress
+  // Result: todayMinutes ends up as 0 instead of 1
+}, [user]);
+
+// Inside fetchFocusData:
+setTodayMinutes(todayData?.focusMinutes || 0);  // ❌ OVERWRITES the correct value!
+```
+
+### Why It Failed After Logout:
+- When user logs out, `localStorage.clear()` is called (correct behavior)
 - The `todayMinutes` state variable was initialized to `0`
-- On login, the `useEffect` was only calling `fetchFocusData()` but **NOT** `fetchTodayProgress()`
-- Result: The component showed `0h 0m` even though database had the correct data
+- On login, both `fetchFocusData()` and `fetchTodayProgress()` were called
+- Due to async timing, `fetchFocusData()` would complete last and set `todayMinutes` to 0
+- Result: Display showed "0h 0m" even though database had the correct data
 
 ## ✅ Solution Implemented
 
-### Fix #1: Call `fetchTodayProgress()` on Mount/Login
+### Fix #1: Removed Duplicate `todayMinutes` Update from `fetchFocusData()`
+**File:** `src/components/CompactStreakCalendar.tsx`
+
+**REMOVED THIS CODE:**
+```tsx
+// ❌ OLD CODE - This was causing the race condition
+const fetchFocusData = async () => {
+  // ... fetch data ...
+  
+  // Get today's minutes
+  const today = new Date();
+  const todayStr = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())).toISOString().split('T')[0];
+  const todayData = data.find(d => d.date === todayStr);
+  setTodayMinutes(todayData?.focusMinutes || 0);  // ❌ RACE CONDITION!
+};
+```
+
+**REPLACED WITH:**
+```tsx
+// ✅ NEW CODE - Let fetchTodayProgress() handle todayMinutes
+const fetchFocusData = async () => {
+  // ... fetch data ...
+  
+  setFocusData(data);
+  calculateStreak(data);
+  
+  // ✅ REMOVED: Don't set todayMinutes here - it's handled by fetchTodayProgress()
+  // This was causing a race condition where todayMinutes would be overwritten to 0
+};
+```
+
+**Impact:** 
+- Eliminated the race condition
+- Single source of truth for `todayMinutes` → `fetchTodayProgress()`
+- `fetchFocusData()` now only handles calendar data, not today's progress
+
+### Fix #2: Ensured Correct Call Order in useEffect
 **File:** `src/components/CompactStreakCalendar.tsx`
 
 ```tsx
 useEffect(() => {
   if (user) {
     console.log('🔄 CALENDAR: User authenticated, loading all data');
-    fetchFocusData();
-    fetchTodayProgress(); // ✅ CRITICAL: Load today's progress immediately on login/mount
     
-    // ... rest of the code
+    // ✅ CRITICAL: Load data in the correct order
+    // 1. First load the monthly calendar data
+    fetchFocusData();
+    
+    // 2. Then load today's specific progress (this takes priority)
+    fetchTodayProgress();
+    
+    // ... rest of code
   }
 }, [user, currentMonth]);
 ```
 
 **Impact:** 
-- Now loads today's progress from database immediately when user logs in
-- Ensures the display shows correct accumulated time from previous sessions
+- `fetchFocusData()` runs first (loads monthly calendar)
+- `fetchTodayProgress()` runs second (sets today's minutes correctly)
+- Even if `fetchFocusData()` completes late, it won't overwrite `todayMinutes`
 
-### Fix #2: Added Polling Mechanism
+### Fix #3: Added Polling Mechanism
+**File:** `src/components/CompactStreakCalendar.tsx`
+
+```tsx
+### Fix #3: Added Polling Mechanism
 **File:** `src/components/CompactStreakCalendar.tsx`
 
 ```tsx
 // ✅ NEW: Poll every 10 seconds to keep progress updated
 const pollInterval = setInterval(() => {
-  console.log('🔄 CALENDAR: Polling today\'s progress');
+  console.log('🔄 CALENDAR: Polling today's progress');
   fetchTodayProgress();
 }, 10000); // 10 seconds
 
@@ -60,7 +122,29 @@ return () => {
 - Catches any updates from active timer sessions
 - Ensures consistency across multiple browser tabs/windows
 
-### Fix #3: Reset Progress on Logout
+### Fix #4: Better Error Handling
+**File:** `src/components/CompactStreakCalendar.tsx`
+
+```tsx
+} catch (error) {
+  console.error("❌ CALENDAR: Error fetching today's progress:", error);
+  // ✅ Don't set to 0 on error - keep the previous value
+}
+```
+
+**Impact:**
+- Network errors won't reset the display to 0
+- Maintains last known good value
+
+### Fix #5: Reset Progress on Logout
+```
+
+**Impact:**
+- Keeps the progress display updated every 10 seconds
+- Catches any updates from active timer sessions
+- Ensures consistency across multiple browser tabs/windows
+
+### Fix #5: Reset Progress on Logout
 **File:** `src/components/CompactStreakCalendar.tsx`
 
 ```tsx
@@ -75,7 +159,7 @@ return () => {
 - Properly resets the display when user logs out
 - Prevents showing stale data from previous user
 
-### Fix #4: Enhanced Backend Logging
+### Fix #6: Enhanced Backend Logging
 **File:** `server/routes/focus.js`
 
 ```javascript
