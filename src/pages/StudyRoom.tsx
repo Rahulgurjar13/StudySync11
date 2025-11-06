@@ -23,7 +23,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const SOCKET_SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Socket.IO needs base URL without /api suffix
+const SOCKET_SERVER_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001').replace(/\/api$/, '');
 
 interface Participant {
   userId: string;
@@ -57,6 +58,9 @@ export const StudyRoom = () => {
   const [currentRoomCode, setCurrentRoomCode] = useState('');
   const [participantCount, setParticipantCount] = useState(1);
   const [userName, setUserName] = useState('');
+  
+  // Connection state
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
   
   // Media state
   const [videoEnabled, setVideoEnabled] = useState(true);
@@ -180,27 +184,67 @@ export const StudyRoom = () => {
 
   // Initialize socket connection
   useEffect(() => {
+    console.log('🔌 Connecting to Socket.IO server:', SOCKET_SERVER_URL);
+    
     socketRef.current = io(SOCKET_SERVER_URL, {
-      transports: ['websocket'],
-      reconnection: true
+      transports: ['websocket', 'polling'], // Try websocket first, fallback to polling
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5,
+      timeout: 20000,
+      path: '/socket.io/', // Explicit path for Socket.IO
+      autoConnect: true,
+      forceNew: true
     });
 
     socketRef.current.on('connect', () => {
-      console.log('✅ Connected to signaling server');
+      console.log('✅ Connected to signaling server at', SOCKET_SERVER_URL);
+      console.log('📡 Socket ID:', socketRef.current?.id);
+      setIsSocketConnected(true);
       toast.success('Connected to video server');
     });
 
-    socketRef.current.on('disconnect', () => {
-      console.log('❌ Disconnected from signaling server');
+    socketRef.current.on('disconnect', (reason) => {
+      console.log('❌ Disconnected from signaling server. Reason:', reason);
+      setIsSocketConnected(false);
+      if (reason === 'io server disconnect') {
+        // Server disconnected, try reconnecting manually
+        socketRef.current?.connect();
+      }
     });
 
     socketRef.current.on('connect_error', (error) => {
-      console.error('Connection error:', error);
-      toast.error('Could not connect to video server. Make sure the backend is running.');
+      console.error('❌ Socket connection error:', error);
+      console.error('Attempted URL:', SOCKET_SERVER_URL);
+      toast.error('Could not connect to video server. Please check your connection.');
+    });
+
+    socketRef.current.on('error', (error) => {
+      console.error('❌ Socket error:', error);
+    });
+
+    socketRef.current.on('reconnect', (attemptNumber) => {
+      console.log('🔄 Reconnected after', attemptNumber, 'attempts');
+      toast.success('Reconnected to video server');
+    });
+
+    socketRef.current.on('reconnect_attempt', (attemptNumber) => {
+      console.log('🔄 Reconnection attempt', attemptNumber);
+    });
+
+    socketRef.current.on('reconnect_error', (error) => {
+      console.error('❌ Reconnection error:', error);
+    });
+
+    socketRef.current.on('reconnect_failed', () => {
+      console.error('❌ Reconnection failed after all attempts');
+      toast.error('Failed to reconnect to video server');
     });
 
     return () => {
       if (socketRef.current) {
+        console.log('🔌 Disconnecting socket...');
         socketRef.current.disconnect();
       }
     };

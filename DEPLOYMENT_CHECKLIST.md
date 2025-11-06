@@ -7,6 +7,7 @@
 ## 📋 Pre-Deployment (5 minutes)
 
 - [ ] **Push code to GitHub**
+
   ```bash
   git add .
   git commit -m "Ready for deployment"
@@ -14,6 +15,7 @@
   ```
 
 - [ ] **MongoDB Atlas setup** (if not done)
+
   - Go to: https://mongodb.com/cloud/atlas
   - Create free M0 cluster
   - Create database user
@@ -32,12 +34,14 @@
 ## 🚀 Deployment #1: Backend (10 minutes)
 
 ### Step 1: Create Web Service
+
 - [ ] Go to https://render.com
 - [ ] Sign up/Login with GitHub
 - [ ] Click "New +" → "Web Service"
 - [ ] Connect `StudySync11` repository
 
 ### Step 2: Configure Service
+
 ```
 Name:            tandem-track-mate-backend
 Region:          Oregon (US West)
@@ -50,6 +54,7 @@ Instance Type:   Free
 ```
 
 ### Step 3: Add Environment Variables
+
 ```
 MONGODB_URI     = mongodb+srv://gurjarrahul9111227474_db_user:Kd4hX1zTAI3guDZs@cluster0.ep5xkwa.mongodb.net/tandem-track-mate?retryWrites=true&w=majority&appName=Cluster0
 
@@ -59,11 +64,13 @@ NODE_ENV        = production
 ```
 
 ### Step 4: Deploy
+
 - [ ] Click "Create Web Service"
 - [ ] Wait 3-5 minutes
 - [ ] Copy your backend URL (e.g., `https://tandem-track-mate-backend.onrender.com`)
 
 ### Step 5: Test Backend
+
 - [ ] Visit: `https://your-backend-url.onrender.com/api/health`
 - [ ] Should see: `{"status":"ok"}` or similar
 
@@ -72,11 +79,13 @@ NODE_ENV        = production
 ## 🎨 Deployment #2: Frontend (10 minutes)
 
 ### Step 1: Create Static Site
+
 - [ ] Go to Render Dashboard
 - [ ] Click "New +" → "Static Site"
 - [ ] Connect `StudySync11` repository
 
 ### Step 2: Configure Site
+
 ```
 Name:              tandem-track-mate-frontend
 Region:            Oregon (US West)
@@ -87,12 +96,15 @@ Publish Directory: dist
 ```
 
 ### Step 3: Add Environment Variable
+
 ```
 VITE_API_URL = https://your-backend-url.onrender.com/api
 ```
+
 **Replace with your actual backend URL from Deployment #1!**
 
 ### Step 4: Deploy
+
 - [ ] Click "Create Static Site"
 - [ ] Wait 3-5 minutes
 - [ ] Copy your frontend URL (e.g., `https://tandem-track-mate-frontend.onrender.com`)
@@ -102,6 +114,7 @@ VITE_API_URL = https://your-backend-url.onrender.com/api
 ## 🔧 Post-Deployment (5 minutes)
 
 ### Update Backend CORS
+
 - [ ] Go to Backend service in Render
 - [ ] Click "Environment" tab
 - [ ] Add new variable:
@@ -112,6 +125,7 @@ VITE_API_URL = https://your-backend-url.onrender.com/api
 - [ ] Wait 2-3 minutes for auto-redeploy
 
 ### Test Everything
+
 - [ ] Visit frontend URL
 - [ ] Try to register new account
 - [ ] Login
@@ -136,6 +150,7 @@ Backend:  https://tandem-track-mate-backend.onrender.com
 ## 🐛 Troubleshooting
 
 ### Backend won't start?
+
 ```bash
 # Check these in Render logs:
 - "MONGODB_URI" is set correctly
@@ -144,6 +159,7 @@ Backend:  https://tandem-track-mate-backend.onrender.com
 ```
 
 ### Frontend can't connect to backend?
+
 ```bash
 # Verify:
 - VITE_API_URL points to correct backend URL
@@ -152,6 +168,7 @@ Backend:  https://tandem-track-mate-backend.onrender.com
 ```
 
 ### CORS errors in browser console?
+
 ```bash
 # Fix:
 - Add FRONTEND_URL to backend environment variables
@@ -160,6 +177,7 @@ Backend:  https://tandem-track-mate-backend.onrender.com
 ```
 
 ### "This site can't be reached"?
+
 ```bash
 # Wait and verify:
 - First deployment takes 5-10 minutes
@@ -172,14 +190,17 @@ Backend:  https://tandem-track-mate-backend.onrender.com
 ## 💡 Pro Tips
 
 1. **Backend sleeps after 15 min** (free tier)
+
    - First request will take 30-60 seconds
    - Use cron-job.org to ping every 14 min to keep it awake
 
 2. **Auto-deploy enabled**
+
    - Push to GitHub = auto-deploy both services
    - No need to manually redeploy
 
 3. **Check logs for errors**
+
    - Render Dashboard → Service → "Logs" tab
    - Real-time logs for debugging
 
@@ -193,7 +214,7 @@ Backend:  https://tandem-track-mate-backend.onrender.com
 
 ```
 ✅ Backend API         - Running on Render
-✅ Frontend App        - Running on Render  
+✅ Frontend App        - Running on Render
 ✅ MongoDB Database    - Running on Atlas
 ✅ Auto-deploy         - Enabled from GitHub
 ✅ Free SSL            - HTTPS for both
@@ -208,6 +229,7 @@ Backend:  https://tandem-track-mate-backend.onrender.com
 ## 🔄 Future Updates
 
 To deploy new features:
+
 ```bash
 # 1. Make code changes
 # 2. Commit and push
@@ -233,6 +255,7 @@ git push origin main
 ## ✅ Success Checklist
 
 After deployment, you should be able to:
+
 - [x] Visit frontend URL and see login page
 - [x] Register a new account
 - [x] Login successfully

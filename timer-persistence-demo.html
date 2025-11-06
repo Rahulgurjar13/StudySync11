@@ -1,432 +1,456 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Timer Persistence Test</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .container {
+        background: white;
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-width: 600px;
+        width: 100%;
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+
+      .subtitle {
+        text-align: center;
+        color: #666;
+        margin-bottom: 30px;
+      }
+
+      .timer-display {
+        font-size: 72px;
+        font-weight: bold;
+        font-family: "Courier New", monospace;
+        text-align: center;
+        color: #667eea;
+        margin: 30px 0;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 30px;
+      }
+
+      button {
+        flex: 1;
+        padding: 15px 30px;
+        font-size: 16px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s;
+      }
+
+      .start-btn {
+        background: #10b981;
+        color: white;
+      }
+
+      .start-btn:hover {
+        background: #059669;
+        transform: translateY(-2px);
+      }
+
+      .stop-btn {
+        background: #ef4444;
+        color: white;
+      }
+
+      .stop-btn:hover {
+        background: #dc2626;
+        transform: translateY(-2px);
+      }
+
+      .reset-btn {
+        background: #6b7280;
+        color: white;
+      }
+
+      .reset-btn:hover {
+        background: #4b5563;
+        transform: translateY(-2px);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      .status {
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-size: 14px;
+      }
+
+      .status.active {
+        background: #dcfce7;
+        color: #166534;
+        border: 2px solid #10b981;
+      }
+
+      .status.paused {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 2px solid #ef4444;
+      }
+
+      .info-box {
+        background: #f3f4f6;
+        padding: 20px;
+        border-radius: 10px;
+        margin-top: 20px;
+      }
+
+      .info-box h3 {
+        color: #374151;
+        margin-bottom: 10px;
+        font-size: 16px;
+      }
+
+      .info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 14px;
+      }
+
+      .info-item:last-child {
+        border-bottom: none;
+      }
+
+      .info-label {
+        color: #6b7280;
+      }
+
+      .info-value {
+        color: #111827;
+        font-weight: 600;
+        font-family: monospace;
+      }
+
+      .test-instructions {
+        background: #eff6ff;
+        border: 2px solid #3b82f6;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+      }
+
+      .test-instructions h3 {
+        color: #1e40af;
+        margin-bottom: 15px;
+        font-size: 18px;
+      }
+
+      .test-instructions ol {
+        margin-left: 20px;
+        color: #1e3a8a;
+      }
+
+      .test-instructions li {
+        margin: 10px 0;
+        line-height: 1.6;
+      }
+
+      .success-badge {
+        background: #10b981;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+        margin-left: 10px;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
         }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+        50% {
+          opacity: 0.5;
         }
-        
-        .container {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 600px;
-            width: 100%;
-        }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        
-        .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-        }
-        
-        .timer-display {
-            font-size: 72px;
-            font-weight: bold;
-            font-family: 'Courier New', monospace;
-            text-align: center;
-            color: #667eea;
-            margin: 30px 0;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-        }
-        
-        button {
-            flex: 1;
-            padding: 15px 30px;
-            font-size: 16px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        
-        .start-btn {
-            background: #10b981;
-            color: white;
-        }
-        
-        .start-btn:hover {
-            background: #059669;
-            transform: translateY(-2px);
-        }
-        
-        .stop-btn {
-            background: #ef4444;
-            color: white;
-        }
-        
-        .stop-btn:hover {
-            background: #dc2626;
-            transform: translateY(-2px);
-        }
-        
-        .reset-btn {
-            background: #6b7280;
-            color: white;
-        }
-        
-        .reset-btn:hover {
-            background: #4b5563;
-            transform: translateY(-2px);
-        }
-        
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-        
-        .status {
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        
-        .status.active {
-            background: #dcfce7;
-            color: #166534;
-            border: 2px solid #10b981;
-        }
-        
-        .status.paused {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 2px solid #ef4444;
-        }
-        
-        .info-box {
-            background: #f3f4f6;
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 20px;
-        }
-        
-        .info-box h3 {
-            color: #374151;
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-        
-        .info-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #e5e7eb;
-            font-size: 14px;
-        }
-        
-        .info-item:last-child {
-            border-bottom: none;
-        }
-        
-        .info-label {
-            color: #6b7280;
-        }
-        
-        .info-value {
-            color: #111827;
-            font-weight: 600;
-            font-family: monospace;
-        }
-        
-        .test-instructions {
-            background: #eff6ff;
-            border: 2px solid #3b82f6;
-            border-radius: 10px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-        
-        .test-instructions h3 {
-            color: #1e40af;
-            margin-bottom: 15px;
-            font-size: 18px;
-        }
-        
-        .test-instructions ol {
-            margin-left: 20px;
-            color: #1e3a8a;
-        }
-        
-        .test-instructions li {
-            margin: 10px 0;
-            line-height: 1.6;
-        }
-        
-        .success-badge {
-            background: #10b981;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            font-weight: 600;
-            display: inline-block;
-            margin-left: 10px;
-        }
-        
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.5;
-            }
-        }
-        
-        .pulse {
-            animation: pulse 2s infinite;
-        }
+      }
+
+      .pulse {
+        animation: pulse 2s infinite;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>🛡️ Timer Persistence Test</h1>
-        <p class="subtitle">Test if timer survives page refresh!</p>
-        
-        <div class="timer-display" id="timerDisplay">25:00</div>
-        
-        <div id="status" class="status paused">
-            ⏸️ Timer is stopped
-        </div>
-        
-        <div class="controls">
-            <button class="start-btn" id="startBtn" onclick="startTimer()">▶️ Start</button>
-            <button class="stop-btn" id="stopBtn" onclick="stopTimer()" disabled>⏹️ Stop</button>
-            <button class="reset-btn" id="resetBtn" onclick="resetTimer()">🔄 Reset</button>
-        </div>
-        
-        <div class="info-box">
-            <h3>📊 Timer State (Saved Every Second)</h3>
-            <div class="info-item">
-                <span class="info-label">Session Start Time:</span>
-                <span class="info-value" id="startTime">Not started</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Elapsed Time:</span>
-                <span class="info-value" id="elapsedTime">0s</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Time Remaining:</span>
-                <span class="info-value" id="remainingTime">1500s</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Last Saved:</span>
-                <span class="info-value pulse" id="lastSaved">Never</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Restored From:</span>
-                <span class="info-value" id="restoredFrom">—</span>
-            </div>
-        </div>
-        
-        <div class="test-instructions">
-            <h3>🧪 Test Instructions</h3>
-            <ol>
-                <li>Click <strong>"▶️ Start"</strong> to begin the 25-minute timer</li>
-                <li>Wait <strong>30 seconds</strong> to see some progress</li>
-                <li>Click <strong>"Refresh Page"</strong> button below or press <code>F5</code></li>
-                <li>Watch the timer <strong>restore automatically</strong> with exact time! ✨</li>
-                <li>Try closing the tab and reopening - it still works! 🎯</li>
-            </ol>
-        </div>
-        
-        <button onclick="window.location.reload()" style="width: 100%; margin-top: 20px; background: #3b82f6;">
-            🔄 Refresh Page (Test Persistence!)
+      <h1>🛡️ Timer Persistence Test</h1>
+      <p class="subtitle">Test if timer survives page refresh!</p>
+
+      <div class="timer-display" id="timerDisplay">25:00</div>
+
+      <div id="status" class="status paused">⏸️ Timer is stopped</div>
+
+      <div class="controls">
+        <button class="start-btn" id="startBtn" onclick="startTimer()">
+          ▶️ Start
         </button>
+        <button class="stop-btn" id="stopBtn" onclick="stopTimer()" disabled>
+          ⏹️ Stop
+        </button>
+        <button class="reset-btn" id="resetBtn" onclick="resetTimer()">
+          🔄 Reset
+        </button>
+      </div>
+
+      <div class="info-box">
+        <h3>📊 Timer State (Saved Every Second)</h3>
+        <div class="info-item">
+          <span class="info-label">Session Start Time:</span>
+          <span class="info-value" id="startTime">Not started</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Elapsed Time:</span>
+          <span class="info-value" id="elapsedTime">0s</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Time Remaining:</span>
+          <span class="info-value" id="remainingTime">1500s</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Last Saved:</span>
+          <span class="info-value pulse" id="lastSaved">Never</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Restored From:</span>
+          <span class="info-value" id="restoredFrom">—</span>
+        </div>
+      </div>
+
+      <div class="test-instructions">
+        <h3>🧪 Test Instructions</h3>
+        <ol>
+          <li>
+            Click <strong>"▶️ Start"</strong> to begin the 25-minute timer
+          </li>
+          <li>Wait <strong>30 seconds</strong> to see some progress</li>
+          <li>
+            Click <strong>"Refresh Page"</strong> button below or press
+            <code>F5</code>
+          </li>
+          <li>
+            Watch the timer <strong>restore automatically</strong> with exact
+            time! ✨
+          </li>
+          <li>Try closing the tab and reopening - it still works! 🎯</li>
+        </ol>
+      </div>
+
+      <button
+        onclick="window.location.reload()"
+        style="width: 100%; margin-top: 20px; background: #3b82f6"
+      >
+        🔄 Refresh Page (Test Persistence!)
+      </button>
     </div>
 
     <script>
-        let timerInterval = null;
-        let sessionStartTime = null;
-        let totalSeconds = 25 * 60; // 25 minutes
-        let timeLeft = totalSeconds;
-        let isActive = false;
+      let timerInterval = null;
+      let sessionStartTime = null;
+      let totalSeconds = 25 * 60; // 25 minutes
+      let timeLeft = totalSeconds;
+      let isActive = false;
 
-        // Load saved state immediately on page load
-        function loadState() {
-            try {
-                const saved = localStorage.getItem('testTimerState');
-                if (saved) {
-                    const state = JSON.parse(saved);
-                    
-                    if (state.isActive && state.sessionStartTime) {
-                        // Calculate elapsed time since start
-                        const now = Date.now();
-                        const elapsedMs = now - state.sessionStartTime;
-                        const elapsedSeconds = Math.floor(elapsedMs / 1000);
-                        const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
-                        
-                        if (remainingSeconds > 0) {
-                            // Restore timer state
-                            sessionStartTime = state.sessionStartTime;
-                            timeLeft = remainingSeconds;
-                            isActive = true;
-                            
-                            // Update UI
-                            document.getElementById('restoredFrom').innerHTML = 
-                                '<span class="success-badge">✅ localStorage</span>';
-                            document.getElementById('status').className = 'status active';
-                            document.getElementById('status').innerHTML = '✅ Timer restored from localStorage!';
-                            
-                            // Start counting
-                            startCounting();
-                            
-                            console.log('✅ Timer restored:', {
-                                elapsedSeconds,
-                                remainingSeconds,
-                                startTime: new Date(sessionStartTime).toISOString()
-                            });
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load state:', error);
-            }
-        }
+      // Load saved state immediately on page load
+      function loadState() {
+        try {
+          const saved = localStorage.getItem("testTimerState");
+          if (saved) {
+            const state = JSON.parse(saved);
 
-        // Save state to localStorage
-        function saveState() {
-            const state = {
-                sessionStartTime,
-                timeLeft,
-                isActive,
-                lastSaved: Date.now()
-            };
-            
-            localStorage.setItem('testTimerState', JSON.stringify(state));
-            
-            // Update UI
-            const now = new Date();
-            document.getElementById('lastSaved').textContent = 
-                now.toLocaleTimeString() + '.' + now.getMilliseconds();
-        }
+            if (state.isActive && state.sessionStartTime) {
+              // Calculate elapsed time since start
+              const now = Date.now();
+              const elapsedMs = now - state.sessionStartTime;
+              const elapsedSeconds = Math.floor(elapsedMs / 1000);
+              const remainingSeconds = Math.max(
+                0,
+                totalSeconds - elapsedSeconds
+              );
 
-        // Update display
-        function updateDisplay() {
-            const minutes = Math.floor(timeLeft / 60);
-            const seconds = timeLeft % 60;
-            document.getElementById('timerDisplay').textContent = 
-                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            
-            // Update info
-            if (sessionStartTime) {
-                const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
-                document.getElementById('startTime').textContent = 
-                    new Date(sessionStartTime).toLocaleTimeString();
-                document.getElementById('elapsedTime').textContent = elapsed + 's';
-            }
-            document.getElementById('remainingTime').textContent = timeLeft + 's';
-        }
-
-        // Start counting down
-        function startCounting() {
-            if (timerInterval) clearInterval(timerInterval);
-            
-            timerInterval = setInterval(() => {
-                if (timeLeft > 0) {
-                    timeLeft--;
-                    updateDisplay();
-                    saveState(); // Save every second!
-                } else {
-                    stopTimer();
-                    alert('🎉 Timer completed!');
-                }
-            }, 1000);
-        }
-
-        // Start timer
-        function startTimer() {
-            if (!isActive) {
-                sessionStartTime = Date.now();
+              if (remainingSeconds > 0) {
+                // Restore timer state
+                sessionStartTime = state.sessionStartTime;
+                timeLeft = remainingSeconds;
                 isActive = true;
-                timeLeft = totalSeconds;
-                
-                document.getElementById('status').className = 'status active';
-                document.getElementById('status').innerHTML = '▶️ Timer is running - Saving every second!';
-                document.getElementById('startBtn').disabled = true;
-                document.getElementById('stopBtn').disabled = false;
-                
+
+                // Update UI
+                document.getElementById("restoredFrom").innerHTML =
+                  '<span class="success-badge">✅ localStorage</span>';
+                document.getElementById("status").className = "status active";
+                document.getElementById("status").innerHTML =
+                  "✅ Timer restored from localStorage!";
+
+                // Start counting
                 startCounting();
-                saveState();
-            }
-        }
 
-        // Stop timer
-        function stopTimer() {
-            if (isActive) {
-                isActive = false;
-                
-                if (timerInterval) {
-                    clearInterval(timerInterval);
-                    timerInterval = null;
-                }
-                
-                document.getElementById('status').className = 'status paused';
-                document.getElementById('status').innerHTML = '⏸️ Timer stopped';
-                document.getElementById('startBtn').disabled = false;
-                document.getElementById('stopBtn').disabled = true;
-                
-                saveState();
+                console.log("✅ Timer restored:", {
+                  elapsedSeconds,
+                  remainingSeconds,
+                  startTime: new Date(sessionStartTime).toISOString(),
+                });
+              }
             }
+          }
+        } catch (error) {
+          console.error("Failed to load state:", error);
         }
+      }
 
-        // Reset timer
-        function resetTimer() {
-            stopTimer();
-            sessionStartTime = null;
-            timeLeft = totalSeconds;
-            isActive = false;
-            
-            localStorage.removeItem('testTimerState');
-            
-            document.getElementById('startTime').textContent = 'Not started';
-            document.getElementById('elapsedTime').textContent = '0s';
-            document.getElementById('remainingTime').textContent = '1500s';
-            document.getElementById('lastSaved').textContent = 'Cleared';
-            document.getElementById('restoredFrom').textContent = '—';
-            
+      // Save state to localStorage
+      function saveState() {
+        const state = {
+          sessionStartTime,
+          timeLeft,
+          isActive,
+          lastSaved: Date.now(),
+        };
+
+        localStorage.setItem("testTimerState", JSON.stringify(state));
+
+        // Update UI
+        const now = new Date();
+        document.getElementById("lastSaved").textContent =
+          now.toLocaleTimeString() + "." + now.getMilliseconds();
+      }
+
+      // Update display
+      function updateDisplay() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        document.getElementById("timerDisplay").textContent = `${String(
+          minutes
+        ).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+        // Update info
+        if (sessionStartTime) {
+          const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+          document.getElementById("startTime").textContent = new Date(
+            sessionStartTime
+          ).toLocaleTimeString();
+          document.getElementById("elapsedTime").textContent = elapsed + "s";
+        }
+        document.getElementById("remainingTime").textContent = timeLeft + "s";
+      }
+
+      // Start counting down
+      function startCounting() {
+        if (timerInterval) clearInterval(timerInterval);
+
+        timerInterval = setInterval(() => {
+          if (timeLeft > 0) {
+            timeLeft--;
             updateDisplay();
-        }
+            saveState(); // Save every second!
+          } else {
+            stopTimer();
+            alert("🎉 Timer completed!");
+          }
+        }, 1000);
+      }
 
-        // Load state on page load
-        loadState();
+      // Start timer
+      function startTimer() {
+        if (!isActive) {
+          sessionStartTime = Date.now();
+          isActive = true;
+          timeLeft = totalSeconds;
+
+          document.getElementById("status").className = "status active";
+          document.getElementById("status").innerHTML =
+            "▶️ Timer is running - Saving every second!";
+          document.getElementById("startBtn").disabled = true;
+          document.getElementById("stopBtn").disabled = false;
+
+          startCounting();
+          saveState();
+        }
+      }
+
+      // Stop timer
+      function stopTimer() {
+        if (isActive) {
+          isActive = false;
+
+          if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+          }
+
+          document.getElementById("status").className = "status paused";
+          document.getElementById("status").innerHTML = "⏸️ Timer stopped";
+          document.getElementById("startBtn").disabled = false;
+          document.getElementById("stopBtn").disabled = true;
+
+          saveState();
+        }
+      }
+
+      // Reset timer
+      function resetTimer() {
+        stopTimer();
+        sessionStartTime = null;
+        timeLeft = totalSeconds;
+        isActive = false;
+
+        localStorage.removeItem("testTimerState");
+
+        document.getElementById("startTime").textContent = "Not started";
+        document.getElementById("elapsedTime").textContent = "0s";
+        document.getElementById("remainingTime").textContent = "1500s";
+        document.getElementById("lastSaved").textContent = "Cleared";
+        document.getElementById("restoredFrom").textContent = "—";
+
         updateDisplay();
-        
-        // Log state for debugging
-        console.log('🛡️ Timer Persistence Test Loaded');
-        console.log('📦 localStorage key: "testTimerState"');
-        console.log('⚡ Auto-saves every 1 second while running');
-        console.log('🔄 Restores automatically on page refresh');
+      }
+
+      // Load state on page load
+      loadState();
+      updateDisplay();
+
+      // Log state for debugging
+      console.log("🛡️ Timer Persistence Test Loaded");
+      console.log('📦 localStorage key: "testTimerState"');
+      console.log("⚡ Auto-saves every 1 second while running");
+      console.log("🔄 Restores automatically on page refresh");
     </script>
-</body>
+  </body>
 </html>

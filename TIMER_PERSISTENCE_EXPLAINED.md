@@ -148,16 +148,16 @@ PAGE REFRESH at 10:35:00 (5 minutes later):
 Load from localStorage:
   sessionStartTime = 1699012345678   (still same!)
   now = 1699012645678                (10:35:00)
-  
+
 Calculate elapsed:
   elapsedMs = now - sessionStartTime
   elapsedMs = 1699012645678 - 1699012345678 = 300000ms
   elapsedSeconds = 300000 / 1000 = 300 seconds = 5 minutes ✅
-  
+
 Calculate remaining:
   totalSeconds = 1500
   remainingSeconds = 1500 - 300 = 1200 seconds = 20 minutes ✅
-  
+
 Restore timer:
   setTimeLeft(1200)  ← Perfect! Timer shows 20:00 remaining
   setIsActive(true)  ← Timer is running
@@ -173,10 +173,10 @@ SCENARIO: Start timer on Desktop, continue on Phone
            │
            ├─ localStorage: Save start time
            └─ Database: Save to MongoDB
-           
+
 10:31:00 - Desktop: Auto-save (1 min elapsed)
            └─ Database: activeMinutes = 1
-           
+
 10:32:00 - Phone: Open app
            │
            ├─ localStorage: Empty (first time on phone)
@@ -251,11 +251,13 @@ SCENARIO: Start timer on Desktop, continue on Phone
 ## What Could Still Cause Data Loss? ⚠️
 
 **Maximum 30 seconds lost if:**
+
 - Browser crashes between auto-saves
 - Server is down during auto-save
 - Both localStorage AND database fail
 
-**Workaround:** 
+**Workaround:**
+
 - Auto-save interval can be reduced to 15s or 10s
 - Add IndexedDB as 4th layer
 - Implement service worker for offline support

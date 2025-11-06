@@ -159,6 +159,7 @@ Backend auto-redeploys → Done! ✅
 ## 📦 What Gets Deployed Where
 
 ### Frontend Deployment (Static Site)
+
 ```
 Source: tandem-track-mate-main/
 ├── src/              ← Your React code
@@ -183,6 +184,7 @@ Result: Static files served via CDN (super fast!)
 ```
 
 ### Backend Deployment (Web Service)
+
 ```
 Source: tandem-track-mate-main/server/
 ├── index.js          ← Main server file
@@ -209,24 +211,29 @@ Result: Always-on API server (with 15min sleep on free tier)
 ## 🔐 Environment Variables Explained
 
 ### Frontend (.env)
+
 ```bash
 VITE_API_URL=https://backend.onrender.com/api
 ```
+
 **Why:** Tells React where to send API requests  
 **Used in:** src/lib/api.ts  
 **Format:** Must start with `VITE_` for Vite to expose it
 
 ### Backend (server/.env)
+
 ```bash
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
 JWT_SECRET=your-secret-key-here
 NODE_ENV=production
 FRONTEND_URL=https://frontend.onrender.com
 ```
-**Why:**  
-- `MONGODB_URI`: Database connection  
-- `JWT_SECRET`: Sign authentication tokens  
-- `NODE_ENV`: Enable production optimizations  
+
+**Why:**
+
+- `MONGODB_URI`: Database connection
+- `JWT_SECRET`: Sign authentication tokens
+- `NODE_ENV`: Enable production optimizations
 - `FRONTEND_URL`: Allow CORS from frontend
 
 ---
@@ -262,18 +269,21 @@ mongodb+srv://cluster0.ep5xkwa.mongodb.net/...
 ## ⚡ Performance Tips
 
 ### Frontend (Static Site)
+
 - ✅ Instant load (CDN-cached)
 - ✅ No server needed
 - ✅ Always fast
 - ⚠️ Rebuild needed for code changes
 
 ### Backend (Web Service - Free Tier)
+
 - ✅ Fast when active
 - ⚠️ Sleeps after 15 min inactivity
 - ⚠️ First request after sleep: 30-60 sec
 - 💡 Solution: Use cron-job.org to ping every 14 min
 
 ### Database (MongoDB Atlas - Free Tier)
+
 - ✅ Always on
 - ✅ 512MB storage (plenty for most apps)
 - ✅ Multiple backups
