@@ -23,7 +23,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-const SOCKET_SERVER_URL = 'http://localhost:3001';
+// Use environment variable for deployed backend, fallback to localhost for development
+const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
 
 interface Participant {
   userId: string;
