@@ -14,7 +14,7 @@ interface FocusDay {
 }
 
 export const CompactStreakCalendar = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [focusData, setFocusData] = useState<FocusDay[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +22,12 @@ export const CompactStreakCalendar = () => {
   const [todayMinutes, setTodayMinutes] = useState(0);
 
   useEffect(() => {
+    // ✅ CRITICAL: Don't do anything while auth is still loading
+    if (authLoading) {
+      console.log('⏳ CALENDAR: Waiting for auth to complete...');
+      return;
+    }
+    
     if (user) {
       console.log('🔄 CALENDAR: User authenticated, loading all data');
       
@@ -61,13 +67,19 @@ export const CompactStreakCalendar = () => {
         window.removeEventListener('timerStateChange', handleTimerUpdate);
       };
     } else {
-      // User logged out - reset today's progress
+      // User logged out (not loading, just no user) - reset today's progress
       console.log('🔄 CALENDAR: User logged out, resetting progress');
       setTodayMinutes(0);
     }
-  }, [user, currentMonth]);
+  }, [user, currentMonth, authLoading]);
 
   const fetchTodayProgress = async () => {
+    // ✅ CRITICAL: Only fetch if user is authenticated
+    if (!user) {
+      console.log('⚠️ CALENDAR: Cannot fetch progress - no user authenticated');
+      return;
+    }
+    
     try {
       console.log('📅 CALENDAR: Fetching real-time today\'s progress');
       console.log('🔑 CALENDAR: User authenticated:', !!user, 'Token:', !!localStorage.getItem('authToken'));
